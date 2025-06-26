@@ -1,5 +1,8 @@
 # custom additions
 *.pt
+downloaded_data/
+data/
+runs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
