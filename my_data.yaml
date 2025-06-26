@@ -1,0 +1,5 @@
+train: /home/szhang/RIPS25-AnalogDevices-ObjectDetection/my_data/images/train
+val: /home/szhang/RIPS25-AnalogDevices-ObjectDetection/my_data/images/val
+
+nc: 3
+names: ['cat1', 'cat2', 'cat3']
