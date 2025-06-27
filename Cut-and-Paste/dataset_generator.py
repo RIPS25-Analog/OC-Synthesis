@@ -148,7 +148,7 @@ def get_annotation_from_mask_file(mask_file, scale=1.0):
         else:
             return -1, -1, -1, -1
     else:
-        print "%s not found. Using empty mask instead."%mask_file
+        print ("%s not found. Using empty mask instead."%mask_file)
         return -1, -1, -1, -1
 
 def get_annotation_from_mask(mask):
@@ -262,7 +262,7 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
     if 'none' not in img_file:
         return 
     
-    print "Working on %s" % img_file
+    print ("Working on %s" % img_file)
     if os.path.exists(anno_file):
         return anno_file
     
@@ -399,7 +399,7 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
     background_dir = BACKGROUND_DIR
     background_files = glob.glob(os.path.join(background_dir, BACKGROUND_GLOB_STRING))
    
-    print "Number of background images : %s"%len(background_files) 
+    print ("Number of background images : %s"%len(background_files) )
     img_labels = zip(img_files, labels)
     random.shuffle(img_labels)
 
@@ -415,7 +415,7 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
         random.shuffle(distractor_files)
     else:
         distractor_files = []
-    print "List of distractor files collected: %s" % distractor_files
+    print ("List of distractor files collected: %s" % distractor_files)
 
     idx = 0
     img_files = []
@@ -433,7 +433,7 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
             n = min(random.randint(MIN_NO_OF_DISTRACTOR_OBJECTS, MAX_NO_OF_DISTRACTOR_OBJECTS), len(distractor_files))
             for i in xrange(n):
                 distractor_objects.append(random.choice(distractor_files))
-            print "Chosen distractor objects: %s" % distractor_objects
+            print ("Chosen distractor objects: %s" % distractor_objects)
 
         idx += 1
         bg_file = random.choice(background_files)
@@ -450,7 +450,7 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
     try:
         p.map(partial_func, params_list)
     except KeyboardInterrupt:
-        print "....\nCaught KeyboardInterrupt, terminating workers"
+        print ("....\nCaught KeyboardInterrupt, terminating workers")
         p.terminate()
     else:
         p.close()
