@@ -2,13 +2,16 @@ from ultralytics import YOLO
 
 model = YOLO("yolo11n.pt")
 
-#results = model.train(data="/home/szhang/RIPS25-AnalogDevices-ObjectDetection/my_data.yaml", epochs=3)
-print("=======================================\n=======================================")
-results = model.train(data="coco8.yaml", epochs=3)
+results = model.train(
+    data = "datasets/kikaben_data.yaml", 
+    epochs = 100, 
+    batch = 4, 
+    freeze = 10
+    )
+print("\n\n\n\n\n")
 
-#results = model.val(data="/home/szhang/RIPS25-AnalogDevices-ObjectDetection/my_data.yaml")
-print("=======================================\n=======================================")
-results = model.val(data="coco8.yaml")
+results = model.val(data="datasets/kikaben_data.yaml")
+print("\n\n\n\n\n")
 
 # Print specific metrics
 '''
@@ -18,7 +21,7 @@ print("Mean average precision at IoU=0.50:", results.box.map50)
 print("Mean recall:", results.box.mr)'''
 
 # Perform object detection on an image using the model
-results = model("/home/szhang/RIPS25-AnalogDevices-ObjectDetection/img.jpg")
+results = model("datasets/img.jpg")
 
 # Export the model to ONNX format
-#success = model.export(format="onnx")
+success = model.export(format="onnx")
