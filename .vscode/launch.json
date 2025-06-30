@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: dataset_generator",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/Cut-and-Paste/dataset_generator.py",
+            "args": [
+                "--scale",
+                "--rotation",
+                "--num", "5",
+                "data/cut_and_paste_root",
+                "data/cut_and_paste_croissants"
+            ]
+        }
+    ]
+}
