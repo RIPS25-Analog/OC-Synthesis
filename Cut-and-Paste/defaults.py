@@ -1,11 +1,11 @@
 # Paths
 # Fill this according to own setup
-BACKGROUND_DIR = 'demo_data_dir/backgrounds/'
-BACKGROUND_GLOB_STRING = '*.png'
-POISSON_BLENDING_DIR = '/usr1/debidatd/pb'
-SELECTED_LIST_FILE = 'demo_data_dir/selected.txt'
-DISTRACTOR_LIST_FILE = 'demo_data_dir/neg_list.txt' 
-DISTRACTOR_DIR = 'demo_data_dir/distractor_objects_dir/'
+BACKGROUND_DIR = 'download/indoorCVPR_09_images/'
+BACKGROUND_GLOB_STRING = '*.jpg'
+POISSON_BLENDING_DIR = 'pb-master/pb-master'
+SELECTED_LIST_FILE = 'data/selected.txt'
+DISTRACTOR_LIST_FILE = 'data/neg_list.txt' 
+DISTRACTOR_DIR = 'data/distractor_objects_dir/'
 DISTRACTOR_GLOB_STRING = '*.jpg'
 INVERTED_MASK = True # Set to true if white pixels represent background
 
@@ -18,8 +18,8 @@ MIN_NO_OF_OBJECTS = 1
 MAX_NO_OF_OBJECTS = 4
 MIN_NO_OF_DISTRACTOR_OBJECTS = 2
 MAX_NO_OF_DISTRACTOR_OBJECTS = 4
-WIDTH = 640
-HEIGHT = 480
+WIDTH = 640 * 4
+HEIGHT = 480 * 4
 MAX_ATTEMPTS_TO_SYNTHESIZE = 20
 
 # Parameters for objects in images

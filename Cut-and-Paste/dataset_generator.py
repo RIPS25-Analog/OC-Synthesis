@@ -1,3 +1,4 @@
+from __future__ import print_function
 import argparse
 import glob
 import sys
@@ -16,6 +17,7 @@ import time
 
 from defaults import *
 sys.path.insert(0, POISSON_BLENDING_DIR)
+sys.path.append('pb-master/pb-master')
 from pb import *
 import math
 from pyblur import *
@@ -56,7 +58,7 @@ def LinearMotionBlur3C(img):
     lineType = lineTypes[lineTypeIdx]
     lineAngle = randomAngle(lineLength)
     blurred_img = img
-    for i in xrange(3):
+    for i in range(3):
         blurred_img[:,:,i] = PIL2array1C(LinearMotionBlur(img[:,:,i], lineLength, lineAngle, lineType))
     blurred_img = Image.fromarray(blurred_img, 'RGB')
     return blurred_img
@@ -94,7 +96,7 @@ def get_list_of_images(root_dir, N=1):
     '''
     img_list = glob.glob(os.path.join(root_dir, '*/*.jpg'))
     img_list_f = []
-    for i in xrange(N):
+    for i in range(N):
         img_list_f = img_list_f + random.sample(img_list, len(img_list))
     return img_list_f
 
@@ -109,7 +111,8 @@ def get_mask_file(img_file):
     Returns:
         string: Correpsonding mask file path
     '''
-    mask_file = img_file.replace('.jpg','.pbm')
+    # mask_file = os.path.join(os.path.dirname(img_file), os.path.basename(img_file).split('.')[0] + '_mask.jpg')
+    mask_file = img_file.replace('.jpg', '.pbm')
     return mask_file
 
 def get_labels(imgs):
@@ -148,7 +151,7 @@ def get_annotation_from_mask_file(mask_file, scale=1.0):
         else:
             return -1, -1, -1, -1
     else:
-        print "%s not found. Using empty mask instead."%mask_file
+        print("%s not found. Using empty mask instead." % mask_file)
         return -1, -1, -1, -1
 
 def get_annotation_from_mask(mask):
@@ -179,7 +182,7 @@ def write_imageset_file(exp_dir, img_files, anno_files):
         anno_files(list): List of annotation files corresponding to each image file
     '''
     with open(os.path.join(exp_dir,'train.txt'),'w') as f:
-        for i in xrange(len(img_files)):
+        for i in range(len(img_files)):
             f.write('%s %s\n'%(img_files[i], anno_files[i]))
 
 def write_labels_file(exp_dir, labels):
@@ -193,7 +196,7 @@ def write_labels_file(exp_dir, labels):
     unique_labels = ['__background__'] + sorted(set(labels))
     with open(os.path.join(exp_dir,'labels.txt'),'w') as f:
         for i, label in enumerate(unique_labels):
-            f.write('%s %s\n'%(i, label))
+            f.write('{} {}\n'.format(i, label))
 
 def keep_selected_labels(img_files, labels):
     '''Filters image files and labels to only retain those that are selected. Useful when one doesn't 
@@ -210,7 +213,7 @@ def keep_selected_labels(img_files, labels):
         selected_labels = [x.strip() for x in f.readlines()]
     new_img_files = []
     new_labels = []
-    for i in xrange(len(img_files)):
+    for i in range(len(img_files)):
         if labels[i] in selected_labels:
             new_img_files.append(img_files[i])
             new_labels.append(labels[i])
@@ -262,116 +265,116 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
     if 'none' not in img_file:
         return 
     
-    print "Working on %s" % img_file
+    print("Working on %s" % img_file)
     if os.path.exists(anno_file):
         return anno_file
     
     all_objects = objects + distractor_objects
     assert len(all_objects) > 0
+    attempt = 0
     while True:
         top = Element('annotation')
         background = Image.open(bg_file)
-        background = background.resize((w, h), Image.ANTIALIAS)
+        background = background.resize((w, h), Image.LANCZOS)
         backgrounds = []
-        for i in xrange(len(blending_list)):
+        for i in range(len(blending_list)):
             backgrounds.append(background.copy())
         
         if dontocclude:
             already_syn = []
         for idx, obj in enumerate(all_objects):
-           foreground = Image.open(obj[0])
-           xmin, xmax, ymin, ymax = get_annotation_from_mask_file(get_mask_file(obj[0]))
-           if xmin == -1 or ymin == -1 or xmax-xmin < MIN_WIDTH or ymax-ymin < MIN_HEIGHT :
+            foreground = Image.open(obj[0])
+            xmin, xmax, ymin, ymax = get_annotation_from_mask_file(get_mask_file(obj[0]))
+            if xmin == -1 or ymin == -1 or xmax-xmin < MIN_WIDTH or ymax-ymin < MIN_HEIGHT :
                continue
-           foreground = foreground.crop((xmin, ymin, xmax, ymax))
-           orig_w, orig_h = foreground.size
-           mask_file =  get_mask_file(obj[0])
-           mask = Image.open(mask_file)
-           mask = mask.crop((xmin, ymin, xmax, ymax))
-           if INVERTED_MASK:
-               mask = Image.fromarray(255-PIL2array1C(mask)).convert('1')
-           o_w, o_h = orig_w, orig_h
-           if scale_augment:
+            foreground = foreground.crop((xmin, ymin, xmax, ymax))
+            orig_w, orig_h = foreground.size
+            mask_file =  get_mask_file(obj[0])
+            mask = Image.open(mask_file)
+            mask = mask.crop((xmin, ymin, xmax, ymax))
+            if INVERTED_MASK:
+                mask = Image.fromarray(255-PIL2array1C(mask)).convert('1')
+            o_w, o_h = orig_w, orig_h
+            if scale_augment:
                 while True:
                     scale = random.uniform(MIN_SCALE, MAX_SCALE)
                     o_w, o_h = int(scale*orig_w), int(scale*orig_h)
                     if  w-o_w > 0 and h-o_h > 0 and o_w > 0 and o_h > 0:
                         break
-                foreground = foreground.resize((o_w, o_h), Image.ANTIALIAS)
-                mask = mask.resize((o_w, o_h), Image.ANTIALIAS)
-           if rotation_augment:
-               max_degrees = MAX_DEGREES  
-               while True:
-                   rot_degrees = random.randint(-max_degrees, max_degrees)
-                   foreground_tmp = foreground.rotate(rot_degrees, expand=True)
-                   mask_tmp = mask.rotate(rot_degrees, expand=True)
-                   o_w, o_h = foreground_tmp.size
-                   if  w-o_w > 0 and h-o_h > 0:
+                foreground = foreground.resize((o_w, o_h), Image.LANCZOS)
+                mask = mask.resize((o_w, o_h), Image.LANCZOS)
+            if rotation_augment:
+                max_degrees = MAX_DEGREES  
+                while True:
+                    rot_degrees = random.randint(-max_degrees, max_degrees)
+                    foreground_tmp = foreground.rotate(rot_degrees, expand=True)
+                    mask_tmp = mask.rotate(rot_degrees, expand=True)
+                    o_w, o_h = foreground_tmp.size
+                    if  w-o_w > 0 and h-o_h > 0:
                         break
-               mask = mask_tmp
-               foreground = foreground_tmp
-           xmin, xmax, ymin, ymax = get_annotation_from_mask(mask)
-           attempt = 0
-           while True:
-               attempt +=1
-               x = random.randint(int(-MAX_TRUNCATION_FRACTION*o_w), int(w-o_w+MAX_TRUNCATION_FRACTION*o_w))
-               y = random.randint(int(-MAX_TRUNCATION_FRACTION*o_h), int(h-o_h+MAX_TRUNCATION_FRACTION*o_h))
-               if dontocclude:
-                   found = True
-                   for prev in already_syn:
-                       ra = Rectangle(prev[0], prev[2], prev[1], prev[3])
-                       rb = Rectangle(x+xmin, y+ymin, x+xmax, y+ymax)
-                       if overlap(ra, rb):
-                             found = False
-                             break
-                   if found:
-                      break
-               else:
-                   break
-               if attempt == MAX_ATTEMPTS_TO_SYNTHESIZE:
-                   break
-           if dontocclude:
-               already_syn.append([x+xmin, x+xmax, y+ymin, y+ymax])
-           for i in xrange(len(blending_list)):
-               if blending_list[i] == 'none' or blending_list[i] == 'motion':
-                   backgrounds[i].paste(foreground, (x, y), mask)
-               elif blending_list[i] == 'poisson':
-                  offset = (y, x)
-                  img_mask = PIL2array1C(mask)
-                  img_src = PIL2array3C(foreground).astype(np.float64)
-                  img_target = PIL2array3C(backgrounds[i])
-                  img_mask, img_src, offset_adj \
-                       = create_mask(img_mask.astype(np.float64),
-                          img_target, img_src, offset=offset)
-                  background_array = poisson_blend(img_mask, img_src, img_target,
-                                    method='normal', offset_adj=offset_adj)
-                  backgrounds[i] = Image.fromarray(background_array, 'RGB') 
-               elif blending_list[i] == 'gaussian':
-                  backgrounds[i].paste(foreground, (x, y), Image.fromarray(cv2.GaussianBlur(PIL2array1C(mask),(5,5),2)))
-               elif blending_list[i] == 'box':
-                  backgrounds[i].paste(foreground, (x, y), Image.fromarray(cv2.blur(PIL2array1C(mask),(3,3))))
-           if idx >= len(objects):
-               continue 
-           object_root = SubElement(top, 'object')
-           object_type = obj[1]
-           object_type_entry = SubElement(object_root, 'name')
-           object_type_entry.text = str(object_type)
-           object_bndbox_entry = SubElement(object_root, 'bndbox')
-           x_min_entry = SubElement(object_bndbox_entry, 'xmin')
-           x_min_entry.text = '%d'%(max(1,x+xmin))
-           x_max_entry = SubElement(object_bndbox_entry, 'xmax')
-           x_max_entry.text = '%d'%(min(w,x+xmax))
-           y_min_entry = SubElement(object_bndbox_entry, 'ymin')
-           y_min_entry.text = '%d'%(max(1,y+ymin))
-           y_max_entry = SubElement(object_bndbox_entry, 'ymax')
-           y_max_entry.text = '%d'%(min(h,y+ymax))
-           difficult_entry = SubElement(object_root, 'difficult')
-           difficult_entry.text = '0' # Add heuristic to estimate difficulty later on
+                mask = mask_tmp
+                foreground = foreground_tmp
+            xmin, xmax, ymin, ymax = get_annotation_from_mask(mask)
+            attempt = 0
+            while True:
+                attempt +=1
+                x = random.randint(int(-MAX_TRUNCATION_FRACTION*o_w), int(w-o_w+MAX_TRUNCATION_FRACTION*o_w))
+                y = random.randint(int(-MAX_TRUNCATION_FRACTION*o_h), int(h-o_h+MAX_TRUNCATION_FRACTION*o_h))
+                if dontocclude:
+                    found = True
+                    for prev in already_syn:
+                        ra = Rectangle(prev[0], prev[2], prev[1], prev[3])
+                        rb = Rectangle(x+xmin, y+ymin, x+xmax, y+ymax)
+                        if overlap(ra, rb):
+                            found = False
+                            break
+                    if found:
+                        break
+                else:
+                    break
+                if attempt == MAX_ATTEMPTS_TO_SYNTHESIZE:
+                    break
+            if dontocclude:
+                already_syn.append([x+xmin, x+xmax, y+ymin, y+ymax])
+            for i in range(len(blending_list)):
+                if blending_list[i] == 'none' or blending_list[i] == 'motion':
+                    backgrounds[i].paste(foreground, (x, y), mask)
+                elif blending_list[i] == 'poisson':
+                    offset = (y, x)
+                    img_mask = PIL2array1C(mask)
+                    img_src = PIL2array3C(foreground).astype(np.float64)
+                    img_target = PIL2array3C(backgrounds[i])
+                    img_mask, img_src, offset_adj = create_mask(img_mask.astype(np.float64),
+                                                               img_target, img_src, offset=offset)
+                    background_array = poisson_blend(img_mask, img_src, img_target,
+                                     method='normal', offset_adj=offset_adj)
+                    backgrounds[i] = Image.fromarray(background_array, 'RGB') 
+                elif blending_list[i] == 'gaussian':
+                    backgrounds[i].paste(foreground, (x, y), Image.fromarray(cv2.GaussianBlur(PIL2array1C(mask),(5,5),2)))
+                elif blending_list[i] == 'box':
+                    backgrounds[i].paste(foreground, (x, y), Image.fromarray(cv2.blur(PIL2array1C(mask),(3,3))))
+            if idx >= len(objects):
+                continue 
+            object_root = SubElement(top, 'object')
+            object_type = obj[1]
+            object_type_entry = SubElement(object_root, 'name')
+            object_type_entry.text = str(object_type)
+            object_bndbox_entry = SubElement(object_root, 'bndbox')
+            x_min_entry = SubElement(object_bndbox_entry, 'xmin')
+            x_min_entry.text = '{}'.format(max(1,x+xmin))
+            x_max_entry = SubElement(object_bndbox_entry, 'xmax')
+            x_max_entry.text = '{}'.format(min(w,x+xmax))
+            y_min_entry = SubElement(object_bndbox_entry, 'ymin')
+            y_min_entry.text = '{}'.format(max(1,y+ymin))
+            y_max_entry = SubElement(object_bndbox_entry, 'ymax')
+            y_max_entry.text = '{}'.format(min(h,y+ymax))
+            difficult_entry = SubElement(object_root, 'difficult')
+            difficult_entry.text = '0' # Add heuristic to estimate difficulty later o
         if attempt == MAX_ATTEMPTS_TO_SYNTHESIZE:
-           continue
+            continue
         else:
-           break
-    for i in xrange(len(blending_list)):
+            break
+    for i in range(len(blending_list)):
         if blending_list[i] == 'motion':
             backgrounds[i] = LinearMotionBlur3C(PIL2array3C(backgrounds[i]))
         backgrounds[i].save(img_file.replace('none', blending_list[i]))
@@ -399,8 +402,8 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
     background_dir = BACKGROUND_DIR
     background_files = glob.glob(os.path.join(background_dir, BACKGROUND_GLOB_STRING))
    
-    print "Number of background images : %s"%len(background_files) 
-    img_labels = zip(img_files, labels)
+    print("Number of background images : %s"%len(background_files)) 
+    img_labels = list(zip(img_files, labels))
     random.shuffle(img_labels)
 
     if add_distractors:
@@ -411,11 +414,11 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
         for distractor_label in distractor_labels:
             distractor_list += glob.glob(os.path.join(DISTRACTOR_DIR, distractor_label, DISTRACTOR_GLOB_STRING))
 
-        distractor_files = zip(distractor_list, len(distractor_list)*[None])
+        distractor_files = list(zip(distractor_list, len(distractor_list)*[None]))
         random.shuffle(distractor_files)
     else:
         distractor_files = []
-    print "List of distractor files collected: %s" % distractor_files
+    print("List of distractor files collected: %s" % distractor_files)
 
     idx = 0
     img_files = []
@@ -425,15 +428,15 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
         # Get list of objects
         objects = []
         n = min(random.randint(MIN_NO_OF_OBJECTS, MAX_NO_OF_OBJECTS), len(img_labels))
-        for i in xrange(n):
+        for i in range(n):
             objects.append(img_labels.pop())
         # Get list of distractor objects 
         distractor_objects = []
         if add_distractors:
             n = min(random.randint(MIN_NO_OF_DISTRACTOR_OBJECTS, MAX_NO_OF_DISTRACTOR_OBJECTS), len(distractor_files))
-            for i in xrange(n):
+            for i in range(n):
                 distractor_objects.append(random.choice(distractor_files))
-            print "Chosen distractor objects: %s" % distractor_objects
+            print("Chosen distractor objects: %s" % distractor_objects)
 
         idx += 1
         bg_file = random.choice(background_files)
@@ -445,12 +448,13 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
             img_files.append(img_file)
             anno_files.append(anno_file)
 
+    # create_image_anno_wrapper([objects, distractor_objects, img_file, anno_file, bg_file], w=w, h=h, scale_augment=scale_augment, rotation_augment=rotation_augment, blending_list=BLENDING_LIST, dontocclude=dontocclude)
     partial_func = partial(create_image_anno_wrapper, w=w, h=h, scale_augment=scale_augment, rotation_augment=rotation_augment, blending_list=BLENDING_LIST, dontocclude=dontocclude) 
     p = Pool(NUMBER_OF_WORKERS, init_worker)
     try:
         p.map(partial_func, params_list)
     except KeyboardInterrupt:
-        print "....\nCaught KeyboardInterrupt, terminating workers"
+        print("....\nCaught KeyboardInterrupt, terminating workers")
         p.terminate()
     else:
         p.close()
@@ -500,7 +504,7 @@ def parse_args():
     parser.add_argument("--scale",
       help="Add scale augmentation.Default is to add scale augmentation.", action="store_false")
     parser.add_argument("--rotation",
-      help="Add rotation augmentation.Default is to add rotation augmentation.", action="store_false")
+      help="Add rotation augmentation.Default is to add rotation data augmentation.", action="store_false")
     parser.add_argument("--num",
       help="Number of times each image will be in dataset", default=1, type=int)
     parser.add_argument("--dontocclude",
