@@ -94,7 +94,7 @@ def get_list_of_images(root_dir, N=1):
     '''
     img_list = glob.glob(os.path.join(root_dir, '*/*.jpg'))
     img_list_f = []
-    for i in xrange(N):
+    for i in range(N):
         img_list_f = img_list_f + random.sample(img_list, len(img_list))
     return img_list_f
 

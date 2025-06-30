@@ -5,3 +5,5 @@ To create virtual environment:
 
 To activate:
 ```source env/bin/activate```
+
+Packages Used:
