@@ -1,0 +1,10 @@
+names:
+- screwdriver
+- hammer
+- wrench
+- power plugs and sockets
+- door handle
+nc: 5
+test: ../data/processed/openimages-basic-v0/images/test
+train: ../data/processed/openimages-basic-v0/images/train
+val: ../data/processed/openimages-basic-v0/images/val

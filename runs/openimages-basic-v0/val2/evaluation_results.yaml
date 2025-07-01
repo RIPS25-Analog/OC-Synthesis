@@ -1,0 +1,37 @@
+class_names:
+  0: screwdriver
+  1: hammer
+  2: wrench
+  3: power plugs and sockets
+  4: door handle
+data_path: data/openimages-basic-v0.yaml
+mAPs:
+- 0.07701298515134004
+- 0.2323005500852841
+- 0.1154758076951862
+- 0.3407320950200037
+- 0.02572970549775963
+metrics:
+  fitness: 0.1659869175984394
+  metrics/mAP50(B): 0.23561711777516128
+  metrics/mAP50-95(B): 0.15825022868991476
+  metrics/precision(B): 0.3484205969131572
+  metrics/recall(B): 0.2882624017348875
+model_path: runs/openimages-basic-v0/train2/weights/best.pt
+nt_per_class:
+- 21.0
+- 12.0
+- 31.0
+- 14.0
+- 17.0
+nt_per_image:
+- 10.0
+- 10.0
+- 10.0
+- 10.0
+- 10.0
+speed:
+  inference: 12.123583618085831
+  loss: 0.0026458012871444225
+  postprocess: 5.806183065287769
+  preprocess: 3.85541670024395
