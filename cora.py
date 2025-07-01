@@ -16,5 +16,7 @@ model = SAM("sam2.1_b.pt")
 #trial = model("/home/coraguo/RIPS25-AnalogDevices-ObjectDetection/IMG_8156.JPG")
 #trial[0].save("mug_segment.jpg")
 
-trial = model("/home/coraguo/RIPS25-AnalogDevices-ObjectDetection/bhg-types-of-screwdrivers-hero_BRrOcNPR4EC9cfTcXJcJyv-42936dda0b424c2ca66a7858f56ef29b.jpg")
+trial = model("/home/coraguo/RIPS25-AnalogDevices-ObjectDetection/images/bhg-types-of-screwdrivers-hero_BRrOcNPR4EC9cfTcXJcJyv-42936dda0b424c2ca66a7858f56ef29b.jpg")
 trial[0].save("screwdriver.jpg")
+for tr in trial:
+     tr.save("annotated_image.jpg")
