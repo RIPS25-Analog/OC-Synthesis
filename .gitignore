@@ -1,7 +1,7 @@
 *.pt
 mit_indoor/
 OI_subset/
-Cut-and-Paste/*/
+src/Cut-and-Paste/*/
 !Cut-and-Paste/pb/
 backups/
 
