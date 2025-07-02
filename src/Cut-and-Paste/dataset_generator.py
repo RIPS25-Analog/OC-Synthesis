@@ -402,8 +402,9 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
     background_dir = BACKGROUND_DIR
     background_files = glob.glob(os.path.join(background_dir, BACKGROUND_GLOB_STRING))
    
-    print("Number of background images : %s"%len(background_files)) 
-    img_labels = list(zip(img_files, labels))
+    print("Number of background images : %s" % len(background_files)) 
+    img_labels = zip(img_files, labels)
+    img_labels = list(img_labels)  # Convert zip object to list for Python 3
     random.shuffle(img_labels)
 
     if add_distractors:
