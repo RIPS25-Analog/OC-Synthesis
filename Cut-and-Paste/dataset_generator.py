@@ -24,6 +24,7 @@ from pyblur import *
 from collections import namedtuple
 
 Rectangle = namedtuple('Rectangle', 'xmin ymin xmax ymax')
+class_id_dict = {}
 
 def randomAngle(kerneldim):
     """Returns a random angle used to produce motion blurring
@@ -251,14 +252,19 @@ def PIL2array3C(img):
                     np.uint8).reshape(img.size[1], img.size[0], 3)
 
 def create_image_anno_wrapper(
-        args, w=WIDTH, h=HEIGHT, scale_augment=False, rotation_augment=False, blending_list=['none'], dontocclude=False):
+        args, w=WIDTH, h=HEIGHT, scale_augment=False, 
+        rotation_augment=False, blending_list=['none'], dontocclude=False):
    ''' Wrapper used to pass params to workers
    '''
    return create_image_anno(
-       *args, w=w, h=h, scale_augment=scale_augment, rotation_augment=rotation_augment, blending_list=blending_list, dontocclude=dontocclude)
+       *args, w=w, h=h, scale_augment=scale_augment, 
+       rotation_augment=rotation_augment, blending_list=blending_list, 
+       dontocclude=dontocclude)   
 
 def create_image_anno(
-        objects, distractor_objects, img_file, anno_file, bg_file,  w=WIDTH, h=HEIGHT, scale_augment=False, rotation_augment=False, blending_list=['none'], dontocclude=False):
+        objects, distractor_objects, img_file, anno_file, bg_file,  
+        w=WIDTH, h=HEIGHT, scale_augment=False, rotation_augment=False, 
+        blending_list=['none'], dontocclude=False):
     '''Add data augmentation, synthesizes images and generates annotations according to given parameters
 
     Args:
@@ -277,39 +283,57 @@ def create_image_anno(
     if 'none' not in img_file:
         return 
     
-    print("Working on %s" % img_file)
+    print(f"Working on {img_file}")
     if os.path.exists(anno_file):
         return anno_file
 
     all_objects = objects + distractor_objects
     assert len(all_objects) > 0
     attempt = 0
+
     while True:
-        top = Element('annotation')
+        # record label
+        #top = Element('annotation')
+        yolo_lines = []
         
+        # prepare background file
         background = Image.open(bg_file)
         background = background.resize((w, h), resample=Image.Resampling.LANCZOS)
         background = background.convert('RGB')
 
+        # make copies of background for each blending mode
         backgrounds = []
         for i in range(len(blending_list)):
             backgrounds.append(background.copy())
         
         if dontocclude:
             already_syn = []
+
         for idx, obj in enumerate(all_objects):
+            # prepare objects
             foreground = Image.open(obj[0])
             xmin, xmax, ymin, ymax = get_annotation_from_mask_file(get_mask_file(obj[0]))
+
+            # skip this iteration if we have an empty mask ???
             if xmin == -1 or ymin == -1 or xmax-xmin < MIN_WIDTH or ymax-ymin < MIN_HEIGHT :
                 continue
+
+            # crop foreground to the bounding box
             foreground = foreground.crop((xmin, ymin, xmax, ymax))
             orig_w, orig_h = foreground.size
+
+            # prepare masks
             mask_file =  get_mask_file(obj[0])
             mask = Image.open(mask_file)
             mask = mask.crop((xmin, ymin, xmax, ymax))
+
+            # invert mask if needed
             if INVERTED_MASK:
                 mask = Image.fromarray(255-PIL2array1C(mask)).convert('1')
+
             o_w, o_h = orig_w, orig_h
+
+            # add scaling
             if scale_augment:
                 while True:
                     scale = random.uniform(MIN_SCALE, MAX_SCALE)
@@ -318,6 +342,8 @@ def create_image_anno(
                         break
                 foreground = foreground.resize((o_w, o_h), resample=Image.Resampling.LANCZOS)
                 mask = mask.resize((o_w, o_h), resample=Image.Resampling.LANCZOS)
+
+            # add rotation
             if rotation_augment:
                 max_degrees = MAX_DEGREES  
                 while True:
@@ -330,10 +356,14 @@ def create_image_anno(
                 mask = mask_tmp
                 foreground = foreground_tmp
             xmin, xmax, ymin, ymax = get_annotation_from_mask(mask)
+
+            # ?????????????
             while True:
-                attempt +=1
-                x = random.randint(int(-MAX_TRUNCATION_FRACTION*o_w), int(w-o_w+MAX_TRUNCATION_FRACTION*o_w))
-                y = random.randint(int(-MAX_TRUNCATION_FRACTION*o_h), int(h-o_h+MAX_TRUNCATION_FRACTION*o_h))
+                attempt += 1
+                x = random.randint(int(-MAX_TRUNCATION_FRACTION*o_w), 
+                                   int(w-o_w+MAX_TRUNCATION_FRACTION*o_w))
+                y = random.randint(int(-MAX_TRUNCATION_FRACTION*o_h), 
+                                   int(h-o_h+MAX_TRUNCATION_FRACTION*o_h))
                 if dontocclude:
                     found = True
                     for prev in already_syn:
@@ -346,10 +376,15 @@ def create_image_anno(
                         break
                 else:
                     break
+
                 if attempt == MAX_ATTEMPTS_TO_SYNTHESIZE:
                     break
+            # end while loop
+
             if dontocclude:
                 already_syn.append([x+xmin, x+xmax, y+ymin, y+ymax])
+
+            # create for each blending mode
             for i in range(len(blending_list)):
                 if mask.mode != 'L':
                         mask = mask.convert('L')
@@ -362,11 +397,6 @@ def create_image_anno(
                     img_src = PIL2array3C(foreground).astype(np.float64)
 
                     print("Current background: " + bg_file)
-                    #
-                    #
-                    #
-                    #
-                    print(backgrounds[i].size)
                     img_target = PIL2array3C(backgrounds[i])
 
                     img_mask, img_src, offset_adj \
@@ -379,9 +409,25 @@ def create_image_anno(
                     backgrounds[i].paste(foreground, (x, y), Image.fromarray(cv2.GaussianBlur(PIL2array1C(mask),(5,5),2)))
                 elif blending_list[i] == 'box':
                     backgrounds[i].paste(foreground, (x, y), Image.fromarray(cv2.blur(PIL2array1C(mask),(3,3))))
+            # end for loop: blending modes
+            
             if idx >= len(objects):
                 continue 
-            object_root = SubElement(top, 'object')
+
+            # add labels
+            cls_id = class_id_dict[obj[1]]
+            bbox_xmin = max(0, x + xmin)
+            bbox_xmax = min(w, x + xmax)
+            bbox_ymin = max(0, y + ymin)
+            bbox_ymax = min(h, y + ymax)
+
+            x_center = ((bbox_xmin + bbox_xmax) / 2) / w
+            y_center = ((bbox_ymin + bbox_ymax) / 2) / h
+            bbox_width = (bbox_xmax - bbox_xmin) / w
+            bbox_height = (bbox_ymax - bbox_ymin) / h
+
+            yolo_lines.append(f"{cls_id} {x_center:.6f} {y_center:.6f} {bbox_width:.6f} {bbox_height:.6f}")
+            '''object_root = SubElement(top, 'object')
             object_type = obj[1]
             object_type_entry = SubElement(object_root, 'name')
             object_type_entry.text = str(object_type)
@@ -395,20 +441,27 @@ def create_image_anno(
             y_max_entry = SubElement(object_bndbox_entry, 'ymax')
             y_max_entry.text = '%d'%(min(h,y+ymax))
             difficult_entry = SubElement(object_root, 'difficult')
-            difficult_entry.text = '0' # Add heuristic to estimate difficulty later on
+            difficult_entry.text = '0' # Add heuristic to estimate difficulty later on'''
+        # end for loop
 
         if attempt == MAX_ATTEMPTS_TO_SYNTHESIZE:
             continue
         else:
             break
+    # end while loop
+
+    # save images with blending modes
     for i in range(len(blending_list)):
         if blending_list[i] == 'motion':
             backgrounds[i] = LinearMotionBlur3C(PIL2array3C(backgrounds[i]))
         backgrounds[i].save(img_file.replace('none', blending_list[i]))
 
-    xmlstr = xml.dom.minidom.parseString(tostring(top)).toprettyxml(indent="    ")
+    # save labels
     with open(anno_file, "w") as f:
-        f.write(xmlstr)
+        f.write("\n".join(yolo_lines))
+    '''label_str = xml.dom.minidom.parseString(tostring(top)).toprettyxml(indent="    ") 
+    with open(anno_file, "w") as f:
+        f.write(label_str)'''
    
 def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_augment, dontocclude, add_distractors):
     '''Creates list of objects and distrctor objects to be pasted on what images.
@@ -427,9 +480,11 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
     w = WIDTH
     h = HEIGHT
     background_dir = BACKGROUND_DIR
-    background_files = glob.glob(os.path.join(background_dir, BACKGROUND_GLOB_STRING))
-   
+
+    # a list of all background files
+    background_files = glob.glob(os.path.join(background_dir, f'*{BACKGROUND_STRING}'))
     print("Number of background images : %s"%len(background_files))
+
     img_labels = list(zip(img_files, labels))
     random.shuffle(img_labels)
 
@@ -443,20 +498,23 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
 
         distractor_files = zip(distractor_list, len(distractor_list)*[None])
         random.shuffle(distractor_files)
+
+        print("List of distractor files collected: %s" % distractor_files)
     else:
         distractor_files = []
-    print("List of distractor files collected: %s" % distractor_files)
-
+    
     idx = 0
     img_files = []
     anno_files = []
     params_list = []
+
     while len(img_labels) > 0:
         # Get list of objects
         objects = []
         n = min(random.randint(MIN_NO_OF_OBJECTS, MAX_NO_OF_OBJECTS), len(img_labels))
         for i in range(n):
             objects.append(img_labels.pop())
+            
         # Get list of distractor objects 
         distractor_objects = []
         if add_distractors:
@@ -471,11 +529,12 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
         #    bg_file = background_files[i]
         for blur in BLENDING_LIST:
             img_file = os.path.join(img_dir, f"{idx}_{blur}{OBJECT_STRING}")
-            anno_file = os.path.join(anno_dir, '%i.xml'%idx)
+            anno_file = os.path.join(anno_dir, f"{idx}.txt") #xml
             params = (objects, distractor_objects, img_file, anno_file, bg_file)
             params_list.append(params)
             img_files.append(img_file)
             anno_files.append(anno_file)
+    # end while loop
 
     partial_func = partial(
         create_image_anno_wrapper, 
@@ -487,6 +546,7 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
         dontocclude=dontocclude
         ) 
     p = Pool(NUMBER_OF_WORKERS, init_worker)
+
     try:
         p.map(partial_func, params_list)
     except KeyboardInterrupt:
@@ -495,6 +555,7 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
     else:
         p.close()
     p.join()
+
     return img_files, anno_files
 
 def init_worker():
@@ -517,7 +578,7 @@ def generate_synthetic_dataset():
     
     write_labels_file(OUT_DIR, labels)
 
-    anno_dir = os.path.join(OUT_DIR, 'annotations')
+    anno_dir = os.path.join(OUT_DIR, 'labels')
     img_dir = os.path.join(OUT_DIR, 'images')
     if not os.path.exists(os.path.join(anno_dir)):
         os.makedirs(anno_dir)
@@ -525,8 +586,21 @@ def generate_synthetic_dataset():
         os.makedirs(img_dir)
     
     syn_img_files, anno_files = gen_syn_data(
-        img_files, labels, img_dir, anno_dir, SCALE, ROTATION, DONT_OCCLUDE, ADD_DISTRACTORS)
+        img_files, labels, img_dir, anno_dir, 
+        SCALE, ROTATION, DONT_OCCLUDE, ADD_DISTRACTORS)
+    
     write_imageset_file(OUT_DIR, syn_img_files, anno_files)
 
+def create_class_id_dict():
+    '''Create a label file
+    '''
+    labels = sorted([
+        name for name in os.listdir(OBJECT_DIR)
+        if os.path.isdir(os.path.join(OBJECT_DIR, name))
+    ])
+    global class_id_dict
+    class_id_dict = {label: idx for idx, label in enumerate(labels)}
+
 if __name__ == '__main__':
+    create_class_id_dict()
     generate_synthetic_dataset()

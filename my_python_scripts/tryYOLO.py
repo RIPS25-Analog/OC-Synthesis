@@ -24,4 +24,4 @@ print("Mean recall:", results.box.mr)'''
 results = model("datasets/img.jpg")
 
 # Export the model to ONNX format
-success = model.export(format="onnx")
+#success = model.export(format="onnx", path="yolo_cat_n_dog.onnx")

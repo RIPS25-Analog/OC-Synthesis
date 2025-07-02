@@ -2,8 +2,9 @@
 BACKGROUND_DIR = 'datasets_for_cnp/background'
 OBJECT_DIR = 'datasets_for_cnp/objects'
 OUT_DIR = 'datasets_for_cnp/output'
+LABEL_DIR = 'datasets_for_cnp/labels.txt'
 
-BACKGROUND_GLOB_STRING = '*.png'
+BACKGROUND_STRING = '.png'
 OBJECT_STRING = '.jpg'
 MASK_STRING = '_mask.jpg'
 
@@ -21,7 +22,7 @@ NUM = 5 # Number of times each image will be in dataset
 DONT_OCCLUDE = False # Set to true if objects should not occlude each other
 ADD_DISTRACTORS = False # Set to true if distractor objects should be added to
 
-INVERTED_MASK = True # Set to true if white pixels represent background
+INVERTED_MASK = False # Set to true if white pixels represent background
 
 
 # Parameters for generator

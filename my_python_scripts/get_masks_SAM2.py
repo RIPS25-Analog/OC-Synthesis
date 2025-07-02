@@ -8,20 +8,7 @@ import os
 
 ##################### image segmentation #####################
 
-
-# Load a model
-model = SAM("sam2.1_b.pt")
-
-
-ROOT_DIR = 'datasets_for_cnp/objects_without_masks'
-
-img_list = [
-        f for f in glob.glob(ROOT_DIR + '/*/*.jpg')
-        if not f.endswith('_mask.jpg')
-    ]
-
-# Run inference with bboxes prompt
-for img_path in img_list:
+def get_object_mask(img_path):
     with Image.open(img_path) as img:
         width, height = img.size
 
@@ -37,10 +24,8 @@ for img_path in img_list:
         cv2.imwrite(
             img_path.replace('.jpg', '_mask.jpg'),
             combined_mask)
-
-
+    
 ##################### invert masks #####################
-
 
 def should_invert_mask(mask):
     h, w = mask.shape
@@ -50,9 +35,9 @@ def should_invert_mask(mask):
         mask[h-1, 0],        # bottom-left
         mask[h-1, w-1],      # bottom-right
     ]
-    # Count how many corners are "black" (you can use a threshold if needed)
-    black_corners = sum(c <= 10 for c in corners)  # threshold of 10 to allow for slight artifacts
-    return black_corners >= 2
+    # Count how many corners are "white" (threshold of 245 to allow for slight artifacts)
+    corners = sum(c >= 245 for c in corners)
+    return corners >= 2
 
 def invert_mask_if_needed(mask_path):
     mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
@@ -68,13 +53,26 @@ def invert_mask_if_needed(mask_path):
     else:
         print("No inversion needed.")
     
+##################### main #####################
+
+
+model = SAM("sam2.1_b.pt")
+
+ROOT_DIR = 'datasets_for_cnp/objects'
+
+img_list = [
+        f for f in glob.glob(ROOT_DIR + '/*/*.jpg')
+        if not f.endswith('_mask.jpg')
+    ]
+
+#for img_path in img_list:
+    #get_object_mask(img_path)
 
 
 mask_list = [
-        f for f in glob.glob(ROOT_DIR + '/my_mug/*.jpg')
+        f for f in glob.glob(ROOT_DIR + '/*/*.jpg')
         if f.endswith('_mask.jpg')
     ]
 
-# Run inference with bboxes prompt
 for mask_path in mask_list:
     invert_mask_if_needed(mask_path)
