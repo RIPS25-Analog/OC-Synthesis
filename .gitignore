@@ -1,4 +1,7 @@
+# custom additions
 *.pt
+data/*/
+
 mit_indoor/
 OI_subset/
 src/Cut-and-Paste/*/
