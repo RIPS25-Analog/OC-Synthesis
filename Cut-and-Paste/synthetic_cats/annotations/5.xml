@@ -1,0 +1,23 @@
+<?xml version="1.0" ?>
+<annotation>
+    <object>
+        <name>cat</name>
+        <bndbox>
+            <xmin>9</xmin>
+            <xmax>244</xmax>
+            <ymin>1</ymin>
+            <ymax>158</ymax>
+        </bndbox>
+        <difficult>0</difficult>
+    </object>
+    <object>
+        <name>cat</name>
+        <bndbox>
+            <xmin>365</xmin>
+            <xmax>546</xmax>
+            <ymin>199</ymin>
+            <ymax>366</ymax>
+        </bndbox>
+        <difficult>0</difficult>
+    </object>
+</annotation>

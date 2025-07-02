@@ -235,6 +235,8 @@ def PIL2array3C(img):
     Returns:
         NumPy Array: Converted image
     '''
+    if img.mode != 'RGB':
+        img = img.convert('RGB')
     return np.array(img.getdata(),
                     np.uint8).reshape(img.size[1], img.size[0], 3)
 
@@ -271,9 +273,10 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
     while True:
         top = Element('annotation')
         background = Image.open(bg_file)
-        background = background.resize((w, h), Image.ANTIALIAS)
+        background = background.resize((w, h), Image.Resampling.LANCZOS
+)
         backgrounds = []
-        for i in xrange(len(blending_list)):
+        for i in range(len(blending_list)):
             backgrounds.append(background.copy())
         
         if dontocclude:
@@ -297,8 +300,10 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
                     o_w, o_h = int(scale*orig_w), int(scale*orig_h)
                     if  w-o_w > 0 and h-o_h > 0 and o_w > 0 and o_h > 0:
                         break
-                foreground = foreground.resize((o_w, o_h), Image.ANTIALIAS)
-                mask = mask.resize((o_w, o_h), Image.ANTIALIAS)
+                foreground = foreground.resize((o_w, o_h), Image.Resampling.LANCZOS
+)
+                mask = mask.resize((o_w, o_h), Image.Resampling.LANCZOS
+)
            if rotation_augment:
                max_degrees = MAX_DEGREES  
                while True:
@@ -332,7 +337,7 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
                    break
            if dontocclude:
                already_syn.append([x+xmin, x+xmax, y+ymin, y+ymax])
-           for i in xrange(len(blending_list)):
+           for i in range(len(blending_list)):
                if blending_list[i] == 'none' or blending_list[i] == 'motion':
                    backgrounds[i].paste(foreground, (x, y), mask)
                elif blending_list[i] == 'poisson':
@@ -371,7 +376,7 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
            continue
         else:
            break
-    for i in xrange(len(blending_list)):
+    for i in range(len(blending_list)):
         if blending_list[i] == 'motion':
             backgrounds[i] = LinearMotionBlur3C(PIL2array3C(backgrounds[i]))
         backgrounds[i].save(img_file.replace('none', blending_list[i]))
