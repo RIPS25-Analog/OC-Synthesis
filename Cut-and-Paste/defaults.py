@@ -1,13 +1,28 @@
 # Paths
-# Fill this according to own setup
-BACKGROUND_DIR = 'demo_data_dir/backgrounds/'
+BACKGROUND_DIR = 'datasets_for_cnp/background'
+OBJECT_DIR = 'datasets_for_cnp/objects'
+OUT_DIR = 'datasets_for_cnp/output'
+
 BACKGROUND_GLOB_STRING = '*.png'
-POISSON_BLENDING_DIR = '/usr1/debidatd/pb'
-SELECTED_LIST_FILE = 'demo_data_dir/selected.txt'
-DISTRACTOR_LIST_FILE = 'demo_data_dir/neg_list.txt' 
-DISTRACTOR_DIR = 'demo_data_dir/distractor_objects_dir/'
-DISTRACTOR_GLOB_STRING = '*.jpg'
+OBJECT_STRING = '.jpg'
+MASK_STRING = '_mask.jpg'
+
+#POISSON_BLENDING_DIR = '/usr1/debidatd/pb'
+#SELECTED_LIST_FILE = 'demo_data_dir/selected.txt'
+#DISTRACTOR_LIST_FILE = 'demo_data_dir/neg_list.txt' 
+#DISTRACTOR_DIR = 'demo_data_dir/distractor_objects_dir/'
+#DISTRACTOR_GLOB_STRING = '*.jpg'
+
+# Arguments
+SELECTED = False # Keep only selected instances in the test dataset. Default is to keep all instances in the root directory
+SCALE = True # Set to true if to add scale augmentation
+ROTATION = True # Set to true if to add rotation augmentation
+NUM = 5 # Number of times each image will be in dataset
+DONT_OCCLUDE = False # Set to true if objects should not occlude each other
+ADD_DISTRACTORS = False # Set to true if distractor objects should be added to
+
 INVERTED_MASK = True # Set to true if white pixels represent background
+
 
 # Parameters for generator
 NUMBER_OF_WORKERS = 4

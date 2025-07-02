@@ -187,14 +187,15 @@ def poisson_blend(img_mask, img_src, img_target, method='mix', c=1.0,
 if __name__ == "__main__":
     offset = (0, 500)  
     '''
-    this is (y, x) not (x, y)
+    the format is (y, x), not (x, y)
+    when centered at (0, 0), the positioning looks like the following:
     -----------------------------------------------------------------
     |                                                               |
     |                                                               |
     |-                                                              |
     |---------------|                                               |
     |               |                                               |
-    |(0, 0)    +    |                                               | 
+    |(0, 0)    +    |                                               |
     |               |                                               |
     |---------------|                                               |
     |+                                                              |

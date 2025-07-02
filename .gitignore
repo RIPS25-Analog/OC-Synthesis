@@ -3,7 +3,12 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-datasets/
+#my own files
+datasets*/
+runs/
+
+# pre-trained models
+*.pt
 
 # C extensions
 *.so
