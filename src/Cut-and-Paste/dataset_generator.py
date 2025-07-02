@@ -1,20 +1,18 @@
-import argparse
+#import argparse
 import glob
-import sys
+#import sys
 import os
-from xml.etree.ElementTree import Element, SubElement, tostring
-import xml.dom.minidom
+#from xml.etree.ElementTree import Element, SubElement, tostring
+#import xml.dom.minidom
 import cv2
 import numpy as np
 import random
 from PIL import Image
-import scipy
+#import scipy
 from multiprocessing import Pool
 from functools import partial
 import signal
-import time
-import fnmatch
-
+#import time
 
 from defaults import *
 #sys.path.insert(0, POISSON_BLENDING_DIR)
@@ -463,7 +461,9 @@ def create_image_anno(
     with open(anno_file, "w") as f:
         f.write(label_str)'''
    
-def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_augment, dontocclude, add_distractors):
+def gen_syn_data(
+        img_files, labels, img_dir, anno_dir, 
+        scale_augment, rotation_augment, dontocclude, add_distractors):
     '''Creates list of objects and distrctor objects to be pasted on what images.
         Spawns worker processes and generates images according to given params
 
@@ -529,7 +529,7 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
         #    bg_file = background_files[i]
         for blur in BLENDING_LIST:
             img_file = os.path.join(img_dir, f"{idx}_{blur}{OBJECT_STRING}")
-            anno_file = os.path.join(anno_dir, f"{idx}.txt") #xml
+            anno_file = os.path.join(anno_dir, f"{IMAGE_NAME_STRING}{idx}.txt") #xml
             params = (objects, distractor_objects, img_file, anno_file, bg_file)
             params_list.append(params)
             img_files.append(img_file)

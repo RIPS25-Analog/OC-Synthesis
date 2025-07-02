@@ -2,7 +2,7 @@ import cv2
 import glob
 import os
 
-ROOT_DIR = 'datasets_for_cnp/objects_without_masks'
+ROOT_DIR = 'data/raw/object_raw'
 
 img_list = [
         f for f in glob.glob(ROOT_DIR + '/*/*.jpg')

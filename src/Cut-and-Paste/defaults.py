@@ -1,12 +1,15 @@
-# Paths
-BACKGROUND_DIR = 'datasets_for_cnp/background'
-OBJECT_DIR = 'datasets_for_cnp/objects'
-OUT_DIR = 'datasets_for_cnp/output'
-LABEL_DIR = 'datasets_for_cnp/labels.txt'
+# Paths and names
+VERSION = 0.2
+FOLDER_NAME = 'cut-and-paste-v' + str(VERSION)
+
+BACKGROUND_DIR = 'data/raw/background'
+OBJECT_DIR = 'data/raw/objects'
+OUT_DIR = 'data/synthetic/' + FOLDER_NAME
 
 BACKGROUND_STRING = '.png'
 OBJECT_STRING = '.jpg'
 MASK_STRING = '_mask.jpg'
+IMAGE_NAME_STRING = f'img_{FOLDER_NAME}_'
 
 #POISSON_BLENDING_DIR = '/usr1/debidatd/pb'
 #SELECTED_LIST_FILE = 'demo_data_dir/selected.txt'
@@ -18,7 +21,7 @@ MASK_STRING = '_mask.jpg'
 SELECTED = False # Keep only selected instances in the test dataset. Default is to keep all instances in the root directory
 SCALE = True # Set to true if to add scale augmentation
 ROTATION = True # Set to true if to add rotation augmentation
-NUM = 5 # Number of times each image will be in dataset
+NUM = 25 # Number of times each image will be in dataset
 DONT_OCCLUDE = False # Set to true if objects should not occlude each other
 ADD_DISTRACTORS = False # Set to true if distractor objects should be added to
 

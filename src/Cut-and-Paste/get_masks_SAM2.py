@@ -5,6 +5,7 @@ import glob
 from PIL import Image
 import os
 
+from defaults import *
 
 ##################### image segmentation #####################
 
@@ -58,20 +59,18 @@ def invert_mask_if_needed(mask_path):
 
 model = SAM("sam2.1_b.pt")
 
-ROOT_DIR = 'datasets_for_cnp/objects'
-
 img_list = [
-        f for f in glob.glob(ROOT_DIR + '/*/*.jpg')
-        if not f.endswith('_mask.jpg')
+        f for f in glob.glob(OBJECT_DIR + '/*/*' + OBJECT_STRING)
+        if not f.endswith(MASK_STRING)
     ]
 
-#for img_path in img_list:
-    #get_object_mask(img_path)
+for img_path in img_list:
+    get_object_mask(img_path)
 
 
 mask_list = [
-        f for f in glob.glob(ROOT_DIR + '/*/*.jpg')
-        if f.endswith('_mask.jpg')
+        f for f in glob.glob(OBJECT_DIR + '/*/*' + OBJECT_STRING)
+        if f.endswith(MASK_STRING)
     ]
 
 for mask_path in mask_list:
