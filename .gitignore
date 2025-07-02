@@ -6,6 +6,8 @@ __pycache__/
 #my own files
 datasets*/
 runs/
+.vscode/
+backups/
 
 # pre-trained models
 *.pt
