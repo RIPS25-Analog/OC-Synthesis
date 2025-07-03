@@ -1,0 +1,10 @@
+names:
+- door handle
+- hammer
+- power plugs and sockets
+- screwdriver
+- wrench
+nc: 5
+test: processed/cutNpaste-v0/test/images
+train: processed/cutNpaste-v0/train/images
+val: processed/cutNpaste-v0/val/images

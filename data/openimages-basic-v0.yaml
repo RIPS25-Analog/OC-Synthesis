@@ -5,6 +5,6 @@ names:
 - power plugs and sockets
 - door handle
 nc: 5
-test: ../data/processed/openimages-basic-v0/images/test
-train: ../data/processed/openimages-basic-v0/images/train
-val: ../data/processed/openimages-basic-v0/images/val
+test: ../data/processed/openimages-basic-v0/test/images
+train: ../data/processed/openimages-basic-v0/train/images
+val: ../data/processed/openimages-basic-v0/val/images
