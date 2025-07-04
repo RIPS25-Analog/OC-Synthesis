@@ -1,14 +1,13 @@
 # custom additions
 *.pt
 data/*/
+download/
+.vsode
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
-download/
-runs/
-data/
 
 # C extensions
 *.so

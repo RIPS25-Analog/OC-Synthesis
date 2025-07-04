@@ -1,13 +1,16 @@
 # Paths
 # Fill this according to own setup
-BACKGROUND_DIR = 'download/indoorCVPR_09_images/'
+BACKGROUND_DIR = '../data/raw/backgrounds_indoorCVPR/indoorCVPR_09_images'
 BACKGROUND_GLOB_STRING = '*.jpg'
-POISSON_BLENDING_DIR = 'pb-master/pb-master'
-SELECTED_LIST_FILE = 'data/selected.txt'
-DISTRACTOR_LIST_FILE = 'data/neg_list.txt' 
-DISTRACTOR_DIR = 'data/distractor_objects_dir/'
+POISSON_BLENDING_DIR = '../pb-master/pb-master'
+SELECTED_LIST_FILE = '../data/selected.txt'
+DISTRACTOR_LIST_FILE = '../data/neg_list.txt' 
+DISTRACTOR_DIR = '../data/distractor_objects_dir/'
 DISTRACTOR_GLOB_STRING = '*.jpg'
 INVERTED_MASK = True # Set to true if white pixels represent background
+
+# YOLO input
+TRAIN_VAL_TEST_SPLIT = (0.8, 0.1, 0.1) # sum to 1
 
 # Parameters for generator
 NUMBER_OF_WORKERS = 4

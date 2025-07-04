@@ -14,9 +14,11 @@ from multiprocessing import Pool
 from functools import partial
 import signal
 import time
+import shutil
 
 from defaults import *
 sys.path.insert(0, POISSON_BLENDING_DIR)
+sys.path.append('../pb-master/pb-master')
 sys.path.append('pb-master/pb-master')
 from pb import *
 import math
@@ -111,8 +113,7 @@ def get_mask_file(img_file):
     Returns:
         string: Correpsonding mask file path
     '''
-    # mask_file = os.path.join(os.path.dirname(img_file), os.path.basename(img_file).split('.')[0] + '_mask.jpg')
-    mask_file = img_file.replace('.jpg', '.pbm')
+    mask_file = os.path.join(os.path.dirname(img_file), os.path.basename(img_file).split('.')[0] + '_mask.png')
     return mask_file
 
 def get_labels(imgs):
@@ -185,18 +186,37 @@ def write_imageset_file(exp_dir, img_files, anno_files):
         for i in range(len(img_files)):
             f.write('%s %s\n'%(img_files[i], anno_files[i]))
 
-def write_labels_file(exp_dir, labels):
-    '''Writes the labels file which has the name of an object on each line
+def write_yaml_file(exp_dir, labels):
+    '''Writes the .yaml for YOLO training.
 
     Args:
         exp_dir(string): Experiment directory where all the generated images, annotation and imageset
                          files will be stored
         labels(list): List of labels. This will be useful while training an object detector
     '''
-    unique_labels = ['__background__'] + sorted(set(labels))
-    with open(os.path.join(exp_dir,'labels.txt'),'w') as f:
-        for i, label in enumerate(unique_labels):
-            f.write('{} {}\n'.format(i, label))
+    unique_labels = sorted(set(labels))
+    yaml_path = 'cut_and_paste.yaml'
+    ind_list = [int(path.split('.')[0].split('_')[-1]) for path in glob.glob(os.path.join(exp_dir, 'cut_and_paste_*.yaml'))]
+    if len(ind_list) > 0:
+        yaml_path = f'cut_and_paste_{max(ind_list)+1}.yaml'
+    
+    with open(os.path.join('../data', yaml_path),'w') as f:
+        f.write(f'path: {exp_dir}\n')
+        f.write('\n')
+        for split in ['train', 'val', 'test']:
+            f.write(f'{split}: {os.path.join(exp_dir, split, "labels")}\n')
+        f.write('\n')
+        f.write(f'nc: {len(unique_labels)}\n')
+        f.write('\n')
+        f.write('names:\n')
+        visited = set()
+        count = 0
+        for label in labels:
+            if label not in visited:
+                f.write(f'    {count}: {label}\n')
+                visited.add(label)
+                count += 1
+
 
 def keep_selected_labels(img_files, labels):
     '''Filters image files and labels to only retain those that are selected. Useful when one doesn't 
@@ -273,7 +293,7 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
     assert len(all_objects) > 0
     attempt = 0
     while True:
-        top = Element('annotation')
+        # top = Element('annotation')
         background = Image.open(bg_file)
         background = background.resize((w, h), Image.LANCZOS)
         backgrounds = []
@@ -355,21 +375,34 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
                     backgrounds[i].paste(foreground, (x, y), Image.fromarray(cv2.blur(PIL2array1C(mask),(3,3))))
             if idx >= len(objects):
                 continue 
-            object_root = SubElement(top, 'object')
-            object_type = obj[1]
-            object_type_entry = SubElement(object_root, 'name')
-            object_type_entry.text = str(object_type)
-            object_bndbox_entry = SubElement(object_root, 'bndbox')
-            x_min_entry = SubElement(object_bndbox_entry, 'xmin')
-            x_min_entry.text = '{}'.format(max(1,x+xmin))
-            x_max_entry = SubElement(object_bndbox_entry, 'xmax')
-            x_max_entry.text = '{}'.format(min(w,x+xmax))
-            y_min_entry = SubElement(object_bndbox_entry, 'ymin')
-            y_min_entry.text = '{}'.format(max(1,y+ymin))
-            y_max_entry = SubElement(object_bndbox_entry, 'ymax')
-            y_max_entry.text = '{}'.format(min(h,y+ymax))
-            difficult_entry = SubElement(object_root, 'difficult')
-            difficult_entry.text = '0' # Add heuristic to estimate difficulty later o
+            
+            # Save annotations in text file
+            images, labels = list(zip(*objects))
+            label_num = labels.index(obj[1])
+            xmin = max(1, x+xmin)
+            xmax = min(w, x+xmax)
+            ymin = max(1, y+ymin)
+            ymax = min(h, y+ymax)
+            string = f"{label_num} {(xmin+xmax)/(2*w)} {(ymin+ymax)/(2*h)} {(xmax-xmin)/w} {(ymax-ymin)/h}\n"
+            with open(anno_file, "a") as f:
+                f.write(string)
+            
+            # Uncomment the following lines to save annotations in XML format
+            # object_root = SubElement(top, 'object')
+            # object_type = obj[1]
+            # object_type_entry = SubElement(object_root, 'name')
+            # object_type_entry.text = str(object_type)
+            # object_bndbox_entry = SubElement(object_root, 'bndbox')
+            # x_min_entry = SubElement(object_bndbox_entry, 'xmin')
+            # x_min_entry.text = '{}'.format(max(1,x+xmin))
+            # x_max_entry = SubElement(object_bndbox_entry, 'xmax')
+            # x_max_entry.text = '{}'.format(min(w,x+xmax))
+            # y_min_entry = SubElement(object_bndbox_entry, 'ymin')
+            # y_min_entry.text = '{}'.format(max(1,y+ymin))
+            # y_max_entry = SubElement(object_bndbox_entry, 'ymax')
+            # y_max_entry.text = '{}'.format(min(h,y+ymax))
+            # difficult_entry = SubElement(object_root, 'difficult')
+            # difficult_entry.text = '0' # Add heuristic to estimate difficulty later o
         if attempt == MAX_ATTEMPTS_TO_SYNTHESIZE:
             continue
         else:
@@ -379,9 +412,10 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
             backgrounds[i] = LinearMotionBlur3C(PIL2array3C(backgrounds[i]))
         backgrounds[i].save(img_file.replace('none', blending_list[i]))
 
-    xmlstr = xml.dom.minidom.parseString(tostring(top)).toprettyxml(indent="    ")
-    with open(anno_file, "w") as f:
-        f.write(xmlstr)
+    # Uncomment the following lines to save annotations in XML format
+    # xmlstr = xml.dom.minidom.parseString(tostring(top)).toprettyxml(indent="    ")
+    # with open(anno_file, "w") as f:
+    #     f.write(xmlstr)
    
 def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_augment, dontocclude, add_distractors):
     '''Creates list of objects and distrctor objects to be pasted on what images.
@@ -443,7 +477,7 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
         bg_file = random.choice(background_files)
         for blur in BLENDING_LIST:
             img_file = os.path.join(img_dir, '%i_%s.jpg'%(idx,blur))
-            anno_file = os.path.join(anno_dir, '%i.xml'%idx)
+            anno_file = os.path.join(anno_dir, '%i.txt'%idx)
             params = (objects, distractor_objects, img_file, anno_file, bg_file)
             params_list.append(params)
             img_files.append(img_file)
@@ -464,7 +498,7 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
 
 def init_worker():
     '''
-    Catch Ctrl+C signal to termiante workers
+    Catch Ctrl+C signal to terminate workers
     '''
     signal.signal(signal.SIGINT, signal.SIG_IGN)
  
@@ -479,10 +513,8 @@ def generate_synthetic_dataset(args):
 
     if not os.path.exists(args.exp):
         os.makedirs(args.exp)
-    
-    write_labels_file(args.exp, labels)
 
-    anno_dir = os.path.join(args.exp, 'annotations')
+    anno_dir = os.path.join(args.exp, 'darknet')
     img_dir = os.path.join(args.exp, 'images')
     if not os.path.exists(os.path.join(anno_dir)):
         os.makedirs(anno_dir)
@@ -490,7 +522,38 @@ def generate_synthetic_dataset(args):
         os.makedirs(img_dir)
     
     syn_img_files, anno_files = gen_syn_data(img_files, labels, img_dir, anno_dir, args.scale, args.rotation, args.dontocclude, args.add_distractors)
-    write_imageset_file(args.exp, syn_img_files, anno_files)
+    num_images = len(syn_img_files) // len(BLENDING_LIST)
+    for i, image_name in enumerate(glob.glob(os.path.join(img_dir, '*.jpg'))):
+        # Split into train, val, or test
+        image_num = int(os.path.basename(image_name).split('_')[0])
+        if image_num <= TRAIN_VAL_TEST_SPLIT[0] * num_images:
+            split = 'train'
+        elif image_num <= (TRAIN_VAL_TEST_SPLIT[0] + TRAIN_VAL_TEST_SPLIT[1]) * num_images + 1:
+            split = 'val'
+        else:
+            split = 'test'
+        
+        # Source paths
+        source_image_path = os.path.join(img_dir, os.path.basename(image_name))
+        source_label_path = os.path.join(anno_dir, str(image_num) + '.txt')
+
+        # Destination paths
+        target_image_folder = os.path.join(args.exp, split, 'images')
+        target_label_folder = os.path.join(args.exp, split, 'labels')
+        if not os.path.exists(target_image_folder):
+            os.makedirs(target_image_folder)
+        if not os.path.exists(target_label_folder):
+            os.makedirs(target_label_folder)
+        
+        # Copy files
+        shutil.copy(source_image_path, target_image_folder)
+        shutil.copy(source_label_path, target_label_folder)
+
+        # os.system(f'mv {source_image_path} {target_image_folder}')
+    shutil.rmtree(img_dir)
+    shutil.rmtree(anno_dir)
+    write_yaml_file(args.exp, labels)
+    # write_imageset_file(args.exp, syn_img_files, anno_files)
 
 def parse_args():
     '''Parse input arguments

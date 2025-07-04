@@ -5,13 +5,13 @@
             "name": "Python: dataset_generator",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/Cut-and-Paste/dataset_generator.py",
+            "program": "${workspaceFolder}/src/Cut-and-Paste/dataset_generator.py",
             "args": [
                 "--scale",
                 "--rotation",
-                "--num", "5",
+                "--num", "2",
                 "data/cut_and_paste_root",
-                "data/cut_and_paste_croissants"
+                "data/processed/screwdrivers"
             ]
         },
         {

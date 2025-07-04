@@ -1,0 +1,10 @@
+# Dataset paths relative to the yolov5 folder
+train: ../data/processed/croissants/train
+val:   ../data/processed/croissants/val
+test:  ../data/processed/croissants/test
+
+# Number of classes
+nc: 1
+
+# Class names 0 - cat, 1 - dog
+names: ['croissant']
