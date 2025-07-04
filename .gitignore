@@ -1,6 +1,9 @@
 # custom additions
 *.pt
 data/*/
+wandb/
+runs/*/*/
+!runs/*/dataset-stats/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
