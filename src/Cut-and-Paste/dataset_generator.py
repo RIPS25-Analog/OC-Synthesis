@@ -22,6 +22,8 @@ sys.path.append('../pb-master/pb-master')
 sys.path.append('pb-master/pb-master')
 from pb import *
 import math
+sys.path.append('../pyblur-master/pyblur-master')
+sys.path.append('pyblur-master/pyblur-master')
 from pyblur import *
 from collections import namedtuple
 
@@ -195,11 +197,11 @@ def write_yaml_file(exp_dir, labels):
         labels(list): List of labels. This will be useful while training an object detector
     '''
     unique_labels = sorted(set(labels))
-    yaml_path = 'cut_and_paste.yaml'
+    yaml_path = f'{os.path.basename(exp_dir)}.yaml'
     ind_list = [int(path.split('.')[0].split('_')[-1]) for path in glob.glob(os.path.join(exp_dir, 'cut_and_paste_*.yaml'))]
     if len(ind_list) > 0:
-        yaml_path = f'cut_and_paste_{max(ind_list)+1}.yaml'
-    
+        yaml_path = f'{os.path.basename(exp_dir)}_{max(ind_list)+1}.yaml'
+
     with open(os.path.join('../data', yaml_path),'w') as f:
         f.write(f'path: {exp_dir}\n')
         f.write('\n')
