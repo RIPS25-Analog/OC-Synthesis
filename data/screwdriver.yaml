@@ -1,0 +1,10 @@
+path: ../data/processed/screwdriver
+
+train: ../data/processed/screwdriver/train/labels
+val: ../data/processed/screwdriver/val/labels
+test: ../data/processed/screwdriver/test/labels
+
+nc: 1
+
+names:
+    0: screwdriver

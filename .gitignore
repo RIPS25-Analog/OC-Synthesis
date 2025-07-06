@@ -1,6 +1,9 @@
 # custom additions
 *.pt
 data/*/
+download/
+.vscode
+/home/decla_5ay7wb/RIPS25-AnalogDevices-ObjectDetection/XmlToTxt-master/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
