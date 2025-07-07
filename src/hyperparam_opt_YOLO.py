@@ -3,86 +3,63 @@ import wandb
 import yaml
 import os
 from finetune_YOLO import YOLOfinetuner
+from evaluate_YOLO import YOLOevaluator
 
-def train_with_wandb():
+def train_with_wandb(config=None):
     """Training function to be called by WandB sweep agent."""
-    # Initialize wandb run
-    run = wandb.init()
-    config = wandb.config
+
+    with wandb.init(config=config):
+        config = wandb.config
     
-    # Create YOLOfinetuner with sweep parameters
-    train_kwargs = {
-        'lr0': config.lr0,
-        'lrf': config.lrf,
-        'momentum': config.momentum,
-        'weight_decay': config.weight_decay,
-        'warmup_epochs': config.warmup_epochs,
-        'warmup_momentum': config.warmup_momentum,
-        'warmup_bias_lr': config.warmup_bias_lr,
-        'box': config.box,
-        'cls': config.cls,
-        'dfl': config.dfl,
-        'nbs': config.nbs,
-        'dropout': config.dropout,
-        'batch': config.batch,
-        'imgsz': config.imgsz,
-        'epochs': config.epochs,
-        'freeze': config.freeze,
-    }
-    
-    finetuner = YOLOfinetuner(
-        model_path=config.model_path,
-        data_path=config.data_path,
-        **train_kwargs
-    )
-    
-    # Train the model
-    results = finetuner.train_model()
-    
-    # Extract and log final metrics before finishing the run
-    # Get the best metrics from training results
-    metrics_to_log = {}
-    
-    # Try to get metrics from different possible locations
-    if hasattr(results, 'results_dict'):
-        metrics_dict = results.results_dict
-    elif hasattr(results, 'metrics'):
-        metrics_dict = results.metrics
-    elif isinstance(results, dict):
-        metrics_dict = results
-    else:
-        # If we can't find metrics in the expected format, create basic ones
-        metrics_dict = {}
-    
-    # Extract common YOLO metrics
-    for key, value in metrics_dict.items():
-        if 'mAP50' in key or 'mAP50-95' in key or 'precision' in key or 'recall' in key:
+        train_kwargs = {
+            'lr0': config.lr0,
+            'lrf': config.lrf,
+            'momentum': config.momentum,
+            'weight_decay': config.weight_decay,
+            'warmup_epochs': config.warmup_epochs,
+            'warmup_momentum': config.warmup_momentum,
+            'warmup_bias_lr': config.warmup_bias_lr,
+            'box': config.box,
+            'cls': config.cls,
+            'dfl': config.dfl,
+            'nbs': config.nbs,
+            'dropout': config.dropout,
+            'batch': config.batch,
+            'imgsz': config.imgsz,
+            'epochs': config.epochs,
+            'freeze': config.freeze,
+        }
+        
+        finetuner = YOLOfinetuner(
+            model_path=config.model_path,
+            data_path=config.data_path,
+            **train_kwargs
+        )
+        
+        trainval_results = finetuner.train_model() # model evaluated on some arbitrary validation set
+
+        evaluator = YOLOevaluator(model=finetuner.model,
+                                  data_path=config.data_path,
+                                  data_split='val')  # Evaluate on validation set
+        
+        val_results = evaluator.evaluate_model()  # Evaluate the model
+        
+        metrics_to_log = {}
+        
+        # Extract common YOLO metrics
+        for key, value in val_results.results_dict.items():
             clean_key = key.replace('metrics/', '').replace('(B)', '')
             metrics_to_log[clean_key] = value
-    
-    # Add final metrics with standard names
-    if 'mAP50' in metrics_to_log:
-        metrics_to_log['final_mAP50'] = metrics_to_log['mAP50']
-    if 'mAP50-95' in metrics_to_log:
-        metrics_to_log['final_mAP50-95'] = metrics_to_log['mAP50-95']
         
-    # If we have any metrics, log them
-    if metrics_to_log:
         wandb.log(metrics_to_log)
-    else:
-        # Log a default metric if no metrics were found
-        wandb.log({'final_mAP50': 0.0, 'final_mAP50-95': 0.0})
-    
-    # Finish the run
-    run.finish()
 
-def run_hyperparameter_optimization(project_name, data_path, model_path, sweep_count=50):
+def run_hyperparameter_optimization(project_name, data_path, model_path, sweep_count=50, N_EPOCHS=100):
     """Run hyperparameter optimization using WandB sweeps."""
     
     # Create sweep configuration
     sweep_config = {
         'method': 'bayes',  # Can be 'grid', 'random', or 'bayes'
-        'metric': {'name': 'final_mAP50', 'goal': 'maximize'},
+        'metric': {'name': 'mAP50', 'goal': 'maximize'},
         'parameters': {
             # Learning rate parameters
             'lr0': {'distribution': 'log_uniform_values', 'min': 0.0001, 'max': 0.1},
@@ -116,8 +93,8 @@ def run_hyperparameter_optimization(project_name, data_path, model_path, sweep_c
     # Add fixed parameters that don't change across runs
     sweep_config['parameters']['data_path'] = {'value': data_path}
     sweep_config['parameters']['model_path'] = {'value': model_path}
-    sweep_config['parameters']['epochs'] = {'value': 5}  # Fixed number of epochs for all runs
-    
+    sweep_config['parameters']['epochs'] = {'value': N_EPOCHS}  # Fixed number of epochs for all runs
+
     # Initialize the sweep
     sweep_id = wandb.sweep(sweep_config, project=project_name)
     
@@ -142,6 +119,8 @@ if __name__ == "__main__":
                        help='Number of hyperparameter combinations to try.')
     parser.add_argument('--metric_name', type=str, default='final_mAP50',
                        help='Metric to optimize (final_mAP50, final_mAP50-95).')
+    parser.add_argument('--N_EPOCHS', type=int, default=100,
+                       help='Number of epochs for training in each hyperparameter run.')
     
     args = parser.parse_args()
     
@@ -156,5 +135,6 @@ if __name__ == "__main__":
         project_name=args.project_name,
         data_path=args.data_path,
         model_path=args.model_path,
-        sweep_count=args.sweep_count
+        sweep_count=args.sweep_count,
+        N_EPOCHS=args.N_EPOCHS
     )

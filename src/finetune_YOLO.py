@@ -1,5 +1,8 @@
 from ultralytics import YOLO
 import argparse
+from ultralytics import settings
+
+settings.update({"wandb": False}) # disable WandB so it doesn't interfere if doing hyperparameter sweeps
 
 class YOLOfinetuner:
     def __init__(self, **kwargs):
@@ -28,7 +31,11 @@ class YOLOfinetuner:
         results = self.model.train(**train_args)
         return results
     
+    
+    
 if __name__ == "__main__":
+    settings.update({"wandb": True}) # enable WandB for standalone finetuning (not sweeps)
+    
     parser = argparse.ArgumentParser(description='Train a YOLO model with specified parameters.',
                                       formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--model_path', type=str, default='yolo11n.pt', help='Path to the YOLO model file.')
