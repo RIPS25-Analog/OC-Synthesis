@@ -20,7 +20,8 @@ To evaluate a particular YOLO finetuning run: ``` python src/evaluate_YOLO.py --
 ├── src/                            # All code
 |   ├── finetune_YOLO.py
 |   ├── evaluate_YOLO.py
-|   └── fetch-openimages-data.ipynb # fetches images from Google's Open Images dataset
+|   ├── fetch-openimages-data.ipynb # Fetches images from Google's Open Images dataset
+|   └── SAM_controller.ipynb        # Segments foreground images and calls dataset_generator.py to create synthetic data
 ├── runs/                           # Saved logs and results, organized into subfolders by run ID
 └── data/
     ├── raw/                        # Original custom object samples
