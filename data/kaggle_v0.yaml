@@ -1,0 +1,11 @@
+path: ../data/processed/kaggle_v0/cut_and_paste_data
+
+train: ../data/processed/kaggle_v0/cut_and_paste_data/train/labels
+val: ../data/processed/kaggle_v0/cut_and_paste_data/val/labels
+test: ../data/processed/kaggle_v0/cut_and_paste_data/test/labels
+
+nc: 2
+
+names:
+    0: hammer
+    1: screwdriver

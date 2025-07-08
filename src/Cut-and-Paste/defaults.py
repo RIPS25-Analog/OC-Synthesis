@@ -1,11 +1,11 @@
 # Paths
 # Fill this according to own setup
-BACKGROUND_DIR = 'demo_data_dir/backgrounds/'
-BACKGROUND_GLOB_STRING = '*.png'
-POISSON_BLENDING_DIR = '/usr1/debidatd/pb'
-SELECTED_LIST_FILE = 'demo_data_dir/selected.txt'
-DISTRACTOR_LIST_FILE = 'demo_data_dir/neg_list.txt' 
-DISTRACTOR_DIR = 'demo_data_dir/distractor_objects_dir/'
+BACKGROUND_DIR = '../data/raw/backgrounds/indoorCVPR_09_images'
+BACKGROUND_GLOB_STRING = '*.jpg'
+POISSON_BLENDING_DIR = '../pb-master/pb-master'
+SELECTED_LIST_FILE = '../data/selected.txt'
+DISTRACTOR_LIST_FILE = '../data/neg_list.txt' 
+DISTRACTOR_DIR = '../data/distractor_objects_dir/'
 DISTRACTOR_GLOB_STRING = '*.jpg'
 INVERTED_MASK = True # Set to true if white pixels represent background
 

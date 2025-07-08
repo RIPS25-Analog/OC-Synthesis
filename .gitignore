@@ -1,6 +1,9 @@
 # custom additions
 *.pt
 data/*/
+download/
+.vscode/
+XmlToTxt-master/
 wandb/
 runs/
 
