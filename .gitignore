@@ -1,9 +1,11 @@
 # custom additions
 *.pt
 data/*/
+download/
+.vscode/
+XmlToTxt-master/
 wandb/
 runs/
-.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
