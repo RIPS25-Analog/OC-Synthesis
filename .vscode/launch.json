@@ -9,13 +9,14 @@
             "args": [
                 "--scale",
                 "--rotation",
-                "--num", "2",
-                "data/cut_and_paste_root",
-                "data/processed/screwdrivers"
-            ]
+                "--num", "1",
+                "data/raw/screwdriver_kaggle/cut_and_paste_root/",
+                "data/raw/screwdriver_kaggle/cut_and_paste_root/"
+            ],
+            "env": { "PYTHONPATH": "/home/decla_5ay7wb/RIPS25-AnalogDevices-ObjectDetection/env" },
         },
         {
-            "name": "Python: dataset_generator",
+            "name": "Python: xmltotxt",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/XmlToTxt-master/xmltotxt.py",
@@ -23,7 +24,8 @@
                 "-c", "XmlToTxt-master/classes.txt",
                 "-xml", "data/cut_and_paste_croissants/annotations",
                 "-out", "data/labels_croissants/train"
-            ]
+            ],
+            "env": { "PYTHONPATH": "/home/decla_5ay7wb/RIPS25-AnalogDevices-ObjectDetection/" }
         }
     ]
 }

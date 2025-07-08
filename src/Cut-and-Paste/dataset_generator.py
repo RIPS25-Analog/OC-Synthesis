@@ -18,12 +18,12 @@ import shutil
 
 from defaults import *
 sys.path.insert(0, POISSON_BLENDING_DIR)
-sys.path.append('../pb-master/pb-master')
-sys.path.append('pb-master/pb-master')
+sys.path.append('../src/pb-master/pb-master')
+sys.path.append('src/pb-master/pb-master')
 from pb import *
 import math
-sys.path.append('../pyblur-master/pyblur-master')
-sys.path.append('pyblur-master/pyblur-master')
+sys.path.append('../src/pyblur-master/pyblur-master')
+sys.path.append('src/pyblur-master/pyblur-master')
 from pyblur import *
 from collections import namedtuple
 
@@ -98,7 +98,8 @@ def get_list_of_images(root_dir, N=1):
     Returns:
         list: List of images(with paths) that will be put in the dataset
     '''
-    img_list = glob.glob(os.path.join(root_dir, '*/*.jpg'))
+    img_list = glob.glob(os.path.join(root_dir, 'images', '*'))
+
     img_list_f = []
     for i in range(N):
         img_list_f = img_list_f + random.sample(img_list, len(img_list))
@@ -116,6 +117,7 @@ def get_mask_file(img_file):
         string: Correpsonding mask file path
     '''
     mask_file = os.path.join(os.path.dirname(img_file), os.path.basename(img_file).split('.')[0] + '_mask.png')
+    mask_file = mask_file.replace('images', 'masks')
     return mask_file
 
 def get_labels(imgs):
@@ -197,12 +199,13 @@ def write_yaml_file(exp_dir, labels):
         labels(list): List of labels. This will be useful while training an object detector
     '''
     unique_labels = sorted(set(labels))
-    yaml_path = f'{os.path.basename(exp_dir)}.yaml'
+    yaml_name = f'cut_and_paste.yaml'
     ind_list = [int(path.split('.')[0].split('_')[-1]) for path in glob.glob(os.path.join(exp_dir, 'cut_and_paste_*.yaml'))]
     if len(ind_list) > 0:
-        yaml_path = f'{os.path.basename(exp_dir)}_{max(ind_list)+1}.yaml'
+        yaml_name = f'cut_and_paste_{max(ind_list)+1}.yaml'
 
-    with open(os.path.join('../data', yaml_path),'w') as f:
+    print(os.path.join(exp_dir, yaml_name))
+    with open(os.path.join(exp_dir, yaml_name),'w') as f:
         f.write(f'path: {exp_dir}\n')
         f.write('\n')
         for split in ['train', 'val', 'test']:
@@ -516,7 +519,7 @@ def generate_synthetic_dataset(args):
     if not os.path.exists(args.exp):
         os.makedirs(args.exp)
 
-    anno_dir = os.path.join(args.exp, 'darknet')
+    anno_dir = os.path.join(args.exp, 'labels')
     img_dir = os.path.join(args.exp, 'images')
     if not os.path.exists(os.path.join(anno_dir)):
         os.makedirs(anno_dir)

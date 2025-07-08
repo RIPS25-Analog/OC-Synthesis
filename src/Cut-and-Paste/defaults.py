@@ -1,6 +1,6 @@
 # Paths
 # Fill this according to own setup
-BACKGROUND_DIR = '../data/raw/backgrounds_indoorCVPR/indoorCVPR_09_images'
+BACKGROUND_DIR = '../data/raw/backgrounds/indoorCVPR_09_images'
 BACKGROUND_GLOB_STRING = '*.jpg'
 POISSON_BLENDING_DIR = '../pb-master/pb-master'
 SELECTED_LIST_FILE = '../data/selected.txt'
