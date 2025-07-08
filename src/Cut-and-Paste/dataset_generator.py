@@ -18,12 +18,10 @@ import shutil
 
 from defaults import *
 sys.path.insert(0, POISSON_BLENDING_DIR)
-sys.path.append('../src/pb-master/pb-master')
-sys.path.append('src/pb-master/pb-master')
+sys.path.append('/home/decla_5ay7wb/RIPS25-AnalogDevices-ObjectDetection/src/pb-master/pb-master')
 from pb import *
 import math
-sys.path.append('../src/pyblur-master/pyblur-master')
-sys.path.append('src/pyblur-master/pyblur-master')
+sys.path.append('/home/decla_5ay7wb/RIPS25-AnalogDevices-ObjectDetection/src/pyblur-master/pyblur-master')
 from pyblur import *
 from collections import namedtuple
 
@@ -239,11 +237,11 @@ def write_yaml_file(exp_dir, labels):
     unique_labels = sorted(set(labels))
     yaml_name = f'{exp_dir.split("/")[-2]}.yaml'
 
-    with open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(exp_dir))), yaml_name),'w') as f:
+    with open(os.path.join('/home/data', yaml_name),'w') as f:
         f.write(f'path: {exp_dir}\n')
         f.write('\n')
         for split in ['train', 'val', 'test']:
-            f.write(f'{split}: {os.path.join(exp_dir, split, "labels")}\n')
+            f.write(f'{split}: {os.path.join(exp_dir, split)}\n')
         f.write('\n')
         f.write(f'nc: {len(unique_labels)}\n')
         f.write('\n')
