@@ -10,10 +10,10 @@
                 "--scale",
                 "--rotation",
                 "--num", "1",
-                "data/raw/screwdriver_kaggle/cut_and_paste_root/",
-                "data/raw/screwdriver_kaggle/cut_and_paste_root/"
+                "data/raw/kaggle_v0/cut_and_paste_root/",
+                "data/raw/kaggle_v0/cut_and_paste_root/"
             ],
-            "env": { "PYTHONPATH": "/home/decla_5ay7wb/RIPS25-AnalogDevices-ObjectDetection/env" },
+            "env": { "PYTHONPATH": "${workspaceFolder}" },
         },
         {
             "name": "Python: xmltotxt",

@@ -4,6 +4,8 @@ data/*/
 download/
 .vscode
 /home/decla_5ay7wb/RIPS25-AnalogDevices-ObjectDetection/XmlToTxt-master/
+src/view_images.ipynb
+src/YOLO_test.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

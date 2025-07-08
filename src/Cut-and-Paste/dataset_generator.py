@@ -98,7 +98,7 @@ def get_list_of_images(root_dir, N=1):
     Returns:
         list: List of images(with paths) that will be put in the dataset
     '''
-    img_list = glob.glob(os.path.join(root_dir, 'images', '*'))
+    img_list = glob.glob(os.path.join(root_dir, '*', 'images', '*'))
 
     img_list_f = []
     for i in range(N):
@@ -117,11 +117,11 @@ def get_mask_file(img_file):
         string: Correpsonding mask file path
     '''
     mask_file = os.path.join(os.path.dirname(img_file), os.path.basename(img_file).split('.')[0] + '_mask.png')
-    mask_file = mask_file.replace('images', 'masks')
+    mask_file = mask_file.replace('/images', '/masks')
     return mask_file
 
 def get_labels(imgs):
-    '''Get list of labels/object names. Assumes the images in the root directory follow root_dir/<object>/<image>
+    '''Get list of labels/object names. Assumes the images in the root directory follow root_dir/<object_typ>/<images>/<image>
        structure. Directory name would be object name.
 
     Args:
@@ -131,9 +131,47 @@ def get_labels(imgs):
     '''
     labels = []
     for img_file in imgs:
-        label = img_file.split('/')[-2]
+        label = img_file.split('/')[-3]
         labels.append(label)
     return labels
+
+def read_darknet_bboxes(bbox_path, image_width, image_height):
+	"""Read bounding boxes from darknet format file and convert to pixel coordinates"""
+	bboxes = []
+	
+	with open(bbox_path, 'r') as f:
+		for line in f:
+			parts = line.strip().split()
+			assert len(parts) == 5, f"Invalid bbox line: {line.strip()}"
+			
+			# Darknet format: class_id x_center y_center width height (normalized)
+			class_id = int(parts[0])
+			x_center = float(parts[1])
+			y_center = float(parts[2])
+			width = float(parts[3])
+			height = float(parts[4])
+			
+			# Convert from normalized coordinates to pixel coordinates
+			x_center_px = x_center * image_width
+			y_center_px = y_center * image_height
+			width_px = width * image_width
+			height_px = height * image_height
+			
+			# Convert to x1, y1, x2, y2 format
+			x1 = int(x_center_px - width_px / 2)
+			y1 = int(y_center_px - height_px / 2)
+			x2 = int(x_center_px + width_px / 2)
+			y2 = int(y_center_px + height_px / 2)
+			
+			# Ensure coordinates are within image bounds
+			x1 = max(0, min(x1, image_width - 1))
+			y1 = max(0, min(y1, image_height - 1))
+			x2 = max(0, min(x2, image_width - 1))
+			y2 = max(0, min(y2, image_height - 1))
+			
+			bboxes.append([x1, y1, x2, y2])
+
+	return bboxes
 
 def get_annotation_from_mask_file(mask_file, scale=1.0):
     '''Given a mask file and scale, return the bounding box annotations
@@ -199,13 +237,9 @@ def write_yaml_file(exp_dir, labels):
         labels(list): List of labels. This will be useful while training an object detector
     '''
     unique_labels = sorted(set(labels))
-    yaml_name = f'cut_and_paste.yaml'
-    ind_list = [int(path.split('.')[0].split('_')[-1]) for path in glob.glob(os.path.join(exp_dir, 'cut_and_paste_*.yaml'))]
-    if len(ind_list) > 0:
-        yaml_name = f'cut_and_paste_{max(ind_list)+1}.yaml'
+    yaml_name = f'{exp_dir.split("/")[-2]}.yaml'
 
-    print(os.path.join(exp_dir, yaml_name))
-    with open(os.path.join(exp_dir, yaml_name),'w') as f:
+    with open(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(exp_dir))), yaml_name),'w') as f:
         f.write(f'path: {exp_dir}\n')
         f.write('\n')
         for split in ['train', 'val', 'test']:
@@ -304,7 +338,7 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
         backgrounds = []
         for i in range(len(blending_list)):
             backgrounds.append(background.copy())
-        
+
         if dontocclude:
             already_syn = []
         for idx, obj in enumerate(all_objects):
@@ -512,6 +546,7 @@ def generate_synthetic_dataset(args):
     '''
     img_files = get_list_of_images(args.root, args.num) 
     labels = get_labels(img_files)
+    write_yaml_file(args.exp, labels)
 
     if args.selected:
        img_files, labels = keep_selected_labels(img_files, labels)
@@ -557,7 +592,6 @@ def generate_synthetic_dataset(args):
         # os.system(f'mv {source_image_path} {target_image_folder}')
     shutil.rmtree(img_dir)
     shutil.rmtree(anno_dir)
-    write_yaml_file(args.exp, labels)
     # write_imageset_file(args.exp, syn_img_files, anno_files)
 
 def parse_args():
