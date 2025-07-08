@@ -6,16 +6,19 @@ Setup instructions:
 python -m venv env
 source env/bin/activate
 wandb login  # put API key
-yolo settings wandb=true
 ```
 
 YOLO classes: https://github.com/ultralytics/ultralytics/blob/main/ultralytics/cfg/datasets/coco.yaml
+
+Google Open Images classes: https://storage.googleapis.com/openimages/v5/class-descriptions-boxable.csv
 
 YOLO train method docs: https://docs.ultralytics.com/usage/cfg/#train-settings
 
 To finetune YOLO on a specific data file: ``` python src/finetune_YOLO.py --data_path data/openimages-basic-v0.yaml --epochs 300 --freeze 23 ```
 
 To evaluate a particular YOLO finetuning run: ``` python src/evaluate_YOLO.py --run_path runs/openimages-basic-v0/train2 ```
+
+To run hyperopt for YOLO finetune on a specific data file: ``` python src/hyperparam_opt_YOLO.py --data_path data/openimages-basic-v0.yaml --epoch 100 ```
 
 To test statistics for a particular dataset: ``` python src/data-stats-checker.py --data_path data/openimages-basic-v0.yaml ```
 

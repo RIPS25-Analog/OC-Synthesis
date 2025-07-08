@@ -53,7 +53,7 @@ def train_with_wandb(config=None):
         
         wandb.log(metrics_to_log)
 
-def run_hyperparameter_optimization(project_name, data_path, model_path, sweep_count=50, N_EPOCHS=100):
+def run_hyperparameter_optimization(project_name, data_path, model_path, sweep_count=50, epochs=100):
     """Run hyperparameter optimization using WandB sweeps."""
     
     # Create sweep configuration
@@ -93,7 +93,7 @@ def run_hyperparameter_optimization(project_name, data_path, model_path, sweep_c
     # Add fixed parameters that don't change across runs
     sweep_config['parameters']['data_path'] = {'value': data_path}
     sweep_config['parameters']['model_path'] = {'value': model_path}
-    sweep_config['parameters']['epochs'] = {'value': N_EPOCHS}  # Fixed number of epochs for all runs
+    sweep_config['parameters']['epochs'] = {'value': epochs}  # Fixed number of epochs for all runs
 
     # Initialize the sweep
     sweep_id = wandb.sweep(sweep_config, project=project_name)
@@ -119,7 +119,7 @@ if __name__ == "__main__":
                        help='Number of hyperparameter combinations to try.')
     parser.add_argument('--metric_name', type=str, default='final_mAP50',
                        help='Metric to optimize (final_mAP50, final_mAP50-95).')
-    parser.add_argument('--N_EPOCHS', type=int, default=100,
+    parser.add_argument('--epochs', type=int, default=100,
                        help='Number of epochs for training in each hyperparameter run.')
     
     args = parser.parse_args()
@@ -136,5 +136,5 @@ if __name__ == "__main__":
         data_path=args.data_path,
         model_path=args.model_path,
         sweep_count=args.sweep_count,
-        N_EPOCHS=args.N_EPOCHS
+        epochs=args.epochs
     )
