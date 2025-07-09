@@ -87,7 +87,7 @@ def get_annotation_from_mask(mask, scale=1.0):
     '''
     rows = np.any(mask, axis=1)
     cols = np.any(mask, axis=0)
-    assert len(np.where(rows)[0]) > 0, f"Found all black mask file: {mask_file}"
+    assert len(np.where(rows)[0]) > 0, f"Found an all black mask file: {mask}"
 
     ymin, ymax = np.where(rows)[0][[0, -1]]
     xmin, xmax = np.where(cols)[0][[0, -1]]
@@ -188,9 +188,10 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
 
     attempt = 0
 
-    while True:
+    while attempt < MAX_ATTEMPTS_TO_SYNTHESIZE:
         background = Image.open(bg_file)
         background = background.resize((w, h), Image.LANCZOS)
+
         synth_images = []
         for i in range(len(blending_list)):
             synth_images.append(background.copy())
@@ -201,18 +202,21 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
         for idx, obj in enumerate(all_objects):
             foreground = Image.open(obj[0])
             mask_file =  os.path.join(os.path.dirname(obj[0]), os.path.basename(obj[0]).split('.')[0] + '_mask.png').replace('/images', '/masks')
+
             mask = Image.open(mask_file)
+            if INVERTED_MASK:
+                mask = Image.fromarray(255-PIL2array1C(mask)).convert('1')
 
             xmin, xmax, ymin, ymax = get_annotation_from_mask(mask)
             if xmin == -1 or ymin == -1 or xmax-xmin < MIN_WIDTH or ymax-ymin < MIN_HEIGHT :
-               continue
+               raise ValueError(f"Invalid mask for object {obj[0]}: xmin={xmin}, ymin={ymin}, xmax={xmax}, ymax={ymax}")
+
             foreground = foreground.crop((xmin, ymin, xmax, ymax))
             orig_w, orig_h = foreground.size
+            o_w, o_h = orig_w, orig_h
             
             mask = mask.crop((xmin, ymin, xmax, ymax))
-            if INVERTED_MASK:
-                mask = Image.fromarray(255-PIL2array1C(mask)).convert('1')
-            o_w, o_h = orig_w, orig_h
+
             if scale_augment:
                 while True:
                     scale = random.uniform(MIN_SCALE, MAX_SCALE)
@@ -221,6 +225,7 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
                         break
                 foreground = foreground.resize((o_w, o_h), Image.LANCZOS)
                 mask = mask.resize((o_w, o_h), Image.LANCZOS)
+
             if rotation_augment:
                 max_degrees = MAX_DEGREES  
                 while True:
@@ -232,27 +237,28 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
                         break
                 mask = mask_tmp
                 foreground = foreground_tmp
+
             xmin, xmax, ymin, ymax = get_annotation_from_mask(mask)
             attempt = 0
-            while True:
+            while attempt < MAX_ATTEMPTS_TO_SYNTHESIZE:
                 attempt +=1
                 x = random.randint(int(-MAX_TRUNCATION_FRACTION*o_w), int(w-o_w+MAX_TRUNCATION_FRACTION*o_w))
                 y = random.randint(int(-MAX_TRUNCATION_FRACTION*o_h), int(h-o_h+MAX_TRUNCATION_FRACTION*o_h))
-                if dontocclude:
-                    found = True
-                    for prev in already_syn:
-                        ra = Rectangle(prev[0], prev[2], prev[1], prev[3])
-                        rb = Rectangle(x+xmin, y+ymin, x+xmax, y+ymax)
-                        if overlap(ra, rb):
-                            found = False
-                            break
-                    if found:
-                        break
-                else:
-                    break
-                if attempt == MAX_ATTEMPTS_TO_SYNTHESIZE:
+
+                if not dontocclude:
                     break
 
+                found = True
+                for prev in already_syn:
+                    ra = Rectangle(prev[0], prev[2], prev[1], prev[3])
+                    rb = Rectangle(x+xmin, y+ymin, x+xmax, y+ymax)
+                    if overlap(ra, rb):
+                        found = False
+                        break
+
+                if found:
+                    break
+                
             if dontocclude:
                 already_syn.append([x+xmin, x+xmax, y+ymin, y+ymax])
 
@@ -287,11 +293,6 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
             string = f"{label_num} {(xmin+xmax)/(2*w)} {(ymin+ymax)/(2*h)} {(xmax-xmin)/w} {(ymax-ymin)/h}\n"
             with open(anno_file, "a") as f:
                 f.write(string)
-
-        if attempt == MAX_ATTEMPTS_TO_SYNTHESIZE:
-            continue
-        else:
-            break
     
     for i in range(len(blending_list)):
         if blending_list[i] == 'motion':
@@ -401,36 +402,6 @@ def generate_synthetic_dataset(args):
         os.makedirs(img_dir)
     
     syn_img_files, anno_files = gen_syn_data(img_files, labels, img_dir, anno_dir, args.scale, args.rotation, args.dontocclude, args.add_distractors)
-    num_images = len(syn_img_files) // len(BLENDING_LIST)
-    for i, image_name in enumerate(glob.glob(os.path.join(img_dir, '*.jpg'))):
-        # Split into train, val, or test
-        image_num = int(os.path.basename(image_name).split('_')[0])
-        if image_num <= TRAIN_VAL_TEST_SPLIT[0] * num_images:
-            split = 'train'
-        elif image_num <= (TRAIN_VAL_TEST_SPLIT[0] + TRAIN_VAL_TEST_SPLIT[1]) * num_images + 1:
-            split = 'val'
-        else:
-            split = 'test'
-        
-        # Source paths
-        source_image_path = os.path.join(img_dir, os.path.basename(image_name))
-        source_label_path = os.path.join(anno_dir, str(image_num) + '.txt')
-
-        # Destination paths
-        target_image_folder = os.path.join(args.exp, split, 'images')
-        target_label_folder = os.path.join(args.exp, split, 'labels')
-        if not os.path.exists(target_image_folder):
-            os.makedirs(target_image_folder)
-        if not os.path.exists(target_label_folder):
-            os.makedirs(target_label_folder)
-        
-        # Copy files
-        shutil.copy(source_image_path, target_image_folder)
-        shutil.copy(source_label_path, target_label_folder)
-
-        # os.system(f'mv {source_image_path} {target_image_folder}')
-    shutil.rmtree(img_dir)
-    shutil.rmtree(anno_dir)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Create dataset with different augmentations")

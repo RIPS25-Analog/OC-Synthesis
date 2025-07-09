@@ -9,8 +9,9 @@ DISTRACTOR_GLOB_STRING = '*'
 INVERTED_MASK = True # Set to true if white pixels represent background
 
 # Parameters for generator
-NUMBER_OF_WORKERS = 4
+NUMBER_OF_WORKERS = 14
 BLENDING_LIST = ['gaussian','poisson', 'none', 'box', 'motion']
+TRAIN_VAL_TEST_SPLIT = [0.8, 0.1, 0.1]
 
 # Parameters for images
 MIN_NO_OF_OBJECTS = 1
