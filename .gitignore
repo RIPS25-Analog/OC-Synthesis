@@ -1,6 +1,7 @@
 # custom additions
 *.pt
 data/*/
+dataold/
 download/
 .vscode/
 XmlToTxt-master/
