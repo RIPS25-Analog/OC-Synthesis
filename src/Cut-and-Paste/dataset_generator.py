@@ -10,11 +10,15 @@ from functools import partial
 import signal
 import time
 
+import matplotlib.pyplot as plt
 import math
 import numpy as np
 import random
 from PIL import Image
 import cv2
+import pietorch
+import torch
+from torchvision.transforms import functional as TF
 
 from defaults import *
 # from pb_master.pb import *
@@ -83,17 +87,39 @@ def mask_overlap(mask1, mask2):
     iou = np.sum(intersection) / np.sum(union)
     return iou > MAX_OCCLUSION_IOU
 
-def read_mask_from_file(mask_file):
-    '''Read mask from file and return it as a NumPy array
-
-    Args: mask_file(string): Path of the mask file
-    Returns: NumPy Array: Mask read from the file
+def trim_mask(img_target, img_source, img_mask, offset):
+    '''Creates a mask for the source image to be blended on the target image.
+       The mask is created by padding the source image mask with zeros according to the x, y offsets
+        Also crops the source image to fit in the target image
     '''
-    assert os.path.exists(mask_file), f"Mask file does not exist: {mask_file}"
-    mask = cv2.imread(mask_file, cv2.IMREAD_UNCHANGED)
-    if INVERTED_MASK:
-        mask = 255 - mask
-    return mask
+    x, y = offset
+    print(img_target.shape, img_source.shape, img_mask.shape, offset)
+    h_mask, w_mask = img_mask.shape
+    h_target, w_target, nl = img_target.shape
+
+    hd0 = max(0, -x)
+    wd0 = max(0, -y)
+
+    hd1 = h_mask - max(h_mask + x - h_target, 0)
+    wd1 = w_mask - max(w_mask + y - w_target, 0)
+
+    mask = torch.zeros((h_mask, w_mask))
+    mask[img_mask > 0] = 1
+
+    mask = mask[hd0:hd1, wd0:wd1]
+    src = img_source[hd0:hd1, wd0:wd1]
+
+    # fix offset
+    offset_adj = (max(x, 0), max(y, 0))
+
+    # remove edge from the mask so that we don't have to check the
+    # edge condition
+    mask[:, -1] = 0
+    mask[:, 0] = 0
+    mask[-1, :] = 0
+    mask[0, :] = 0
+
+    return src, mask, offset_adj
 
 def get_annotation_from_mask(mask, scale=1.0):
     '''Given a mask, this returns the bounding box annotations
@@ -306,18 +332,28 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
         for i in range(len(blending_list)):
             if blending_list[i] == 'none' or blending_list[i] == 'motion':
                 synth_images[i].paste(foreground, (x, y), mask)
+
             elif blending_list[i] == 'poisson':
-                offset = (y, x)
-                img_mask = PIL2array1C(mask)
-                img_src = PIL2array3C(foreground).astype(np.float64)
-                img_target = PIL2array3C(synth_images[i])
-                img_mask, img_src, offset_adj = create_mask(img_mask.astype(np.float64),
-                                                            img_target, img_src, offset=offset)
-                background_array = poisson_blend(img_mask, img_src, img_target,
-                                    method='normal', offset_adj=offset_adj)
-                synth_images[i] = Image.fromarray(background_array, 'RGB') 
+                offset = (x, y)
+                target_tensor = TF.to_tensor(synth_images[i]).permute(1,2,0)
+                source_tensor = TF.to_tensor(foreground).permute(1,2,0)
+                mask_tensor = TF.to_tensor(mask).squeeze(0) #PIL2array1C(mask)
+                source_tensor, mask_tensor, offset_adj = trim_mask(target_tensor, source_tensor, mask_tensor, offset)
+                offset_adj = torch.tensor(offset_adj[::-1])
+                print(offset_adj)
+                background_array = pietorch.blend(target_tensor, source_tensor, mask_tensor, offset_adj, False, channels_dim=2)
+                
+                # save pytorch tensors to file
+                torch.save(target_tensor, 'target_tensor.pt')
+                torch.save(source_tensor, 'source_tensor.pt')
+                torch.save(mask_tensor, 'mask_tensor.pt')
+                torch.save(background_array, 'background_array.pt')
+
+                synth_images[i] = Image.fromarray((background_array.numpy()*255).astype(np.uint8), 'RGB')
+
             elif blending_list[i] == 'gaussian':
                 synth_images[i].paste(foreground, (x, y), Image.fromarray(cv2.GaussianBlur(PIL2array1C(mask),(5,5),2)))
+
             elif blending_list[i] == 'box':
                 synth_images[i].paste(foreground, (x, y), Image.fromarray(cv2.blur(PIL2array1C(mask),(3,3))))
         print(f'\tBlending took {time.time() - start_time} seconds')
@@ -332,7 +368,8 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
         string = f"{label_num} {(xmin+xmax)/(2*w)} {(ymin+ymax)/(2*h)} {(xmax-xmin)/w} {(ymax-ymin)/h}\n"
         with open(anno_file, "a") as f:
             f.write(string)
-        
+    
+    # Save images
     for i in range(len(blending_list)):
         # blend all objects at once for motion blur
         if blending_list[i] == 'motion':
@@ -388,6 +425,7 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
         for i in range(n):
             objects.append(img_label_pairs.pop())
         
+        print(f"Chosen objects: {objects}")
         # Get list of distractor objects 
         distractor_objects = []
         if add_distractors:
@@ -398,6 +436,8 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
 
         idx += 1
         bg_file = random.choice(background_files)
+
+        print(f"Chosen background file: {bg_file}")
         
         img_file = os.path.join(img_dir, f'{idx}_none.jpg')
         anno_file = os.path.join(anno_dir, f'{idx}.txt')
