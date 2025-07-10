@@ -10,23 +10,20 @@ from functools import partial
 import signal
 import time
 
-import matplotlib.pyplot as plt
 import math
 import numpy as np
 import random
 from PIL import Image
 import cv2
-import pietorch
-import torch
-from torchvision.transforms import functional as TF
 
 from defaults import *
 # from pb_master.pb import *
 from pb_master.pb import create_mask, poisson_blend
 from pyblur_master.pyblur import LinearMotionBlur
 
-np.random.seed(0)
-random.seed(0)
+seed = 2
+np.random.seed(seed)
+random.seed(seed)
 
 Rectangle = namedtuple('Rectangle', 'xmin ymin xmax ymax')
 
@@ -87,23 +84,24 @@ def mask_overlap(mask1, mask2):
     iou = np.sum(intersection) / np.sum(union)
     return iou > MAX_OCCLUSION_IOU
 
-def trim_mask(img_target, img_source, img_mask, offset):
+def trim_img_n_mask(img_target, img_source, img_mask, offset):
     '''Creates a mask for the source image to be blended on the target image.
        The mask is created by padding the source image mask with zeros according to the x, y offsets
         Also crops the source image to fit in the target image
     '''
     x, y = offset
-    print(img_target.shape, img_source.shape, img_mask.shape, offset)
+    print('\t\t\tTrim mask parameters received:', img_target.shape, img_source.shape, img_mask.shape, offset)
     h_mask, w_mask = img_mask.shape
-    h_target, w_target, nl = img_target.shape
+    h_target, w_target, _ = img_target.shape
 
-    hd0 = max(0, -x)
-    wd0 = max(0, -y)
+    BOUNDARY_MARGIN = 2
+    hd0 = max(BOUNDARY_MARGIN, -y)
+    wd0 = max(BOUNDARY_MARGIN, -x)
 
-    hd1 = h_mask - max(h_mask + x - h_target, 0)
-    wd1 = w_mask - max(w_mask + y - w_target, 0)
+    hd1 = h_mask - max(h_mask + y - h_target, 0) - BOUNDARY_MARGIN
+    wd1 = w_mask - max(w_mask + x - w_target, 0) - BOUNDARY_MARGIN
 
-    mask = torch.zeros((h_mask, w_mask))
+    mask = np.zeros((h_mask, w_mask))
     mask[img_mask > 0] = 1
 
     mask = mask[hd0:hd1, wd0:wd1]
@@ -160,7 +158,6 @@ def write_yaml_file(exp_dir, labels):
 
     with open(yaml_path, 'w') as f:
         yaml.dump(data, f, sort_keys=False)
-
 
 def keep_selected_labels(img_files, labels):
     '''Filters image files and labels to only retain those that are selected. Useful when one doesn't 
@@ -230,15 +227,17 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
     all_objects = objects + distractor_objects
     assert len(all_objects) > 0
 
-    for attempt in range(MAX_ATTEMPTS_TO_SYNTHESIZE):
-        print('\tAnother complete attempt')
+    print('Creating a new image now...')
 
+    for attempt in range(MAX_ATTEMPTS_TO_SYNTHESIZE):
+        print('\tStarting a new attempt to synthesize an image...')
+        start_time = time.time()
         already_syn_objs = []
         all_objects_success = True
         objs_n_masks = [] # reset the list of objects and masks to try again
         # try to place each object that's been assigned to this image (or skip if unplaceable)
         for idx, obj in enumerate(all_objects):
-            print('\t\tStarting new object')
+            print('\tStarting new object...')
             foreground = Image.open(obj[0])
             mask_file =  os.path.join(os.path.dirname(obj[0]), os.path.basename(obj[0]).split('.')[0] + '_mask.png').replace('/images', '/masks')
 
@@ -256,31 +255,31 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
             
             mask = mask.crop((xmin, ymin, xmax, ymax))
 
+            if rotation_augment:
+                print('\t\tRotating object...')
+                rot_degrees = random.randint(-MAX_DEGREES, MAX_DEGREES)
+                foreground = foreground.rotate(rot_degrees, expand=True)
+                mask = mask.rotate(rot_degrees, expand=True)
+                xmin, xmax, ymin, ymax = get_annotation_from_mask(mask)
+                foreground = foreground.crop((xmin, ymin, xmax, ymax))
+                mask = mask.crop((xmin, ymin, xmax, ymax))
+                o_w, o_h = foreground.size
+
             if scale_augment:
+                print('\t\tScaling object...')
                 ACTUAL_MIN_SCALE = MIN_SCALED_DIM / min(orig_w, orig_h) # every object should be at least MIN_SCALED_DIM pixels in width/height
                 ACTUAL_MAX_SCALE = min(w,h) / max(orig_w, orig_h) # every object should be at most min(w,h) pixels in width/height
-                scale = random.uniform(max(MIN_SCALE, ACTUAL_MIN_SCALE), min(ACTUAL_MAX_SCALE, MAX_SCALE))
+                # the *0.9 ensures the object isn't exactly as wide/tall as the background since that may still give errors
+                scale = random.uniform(max(MIN_SCALE, ACTUAL_MIN_SCALE), min(ACTUAL_MAX_SCALE, MAX_SCALE))*0.9
                 o_w, o_h = int(scale*orig_w), int(scale*orig_h)
                 assert w-o_w > 0 and h-o_h > 0 and o_w > 0 and o_h > 0, "Invalid object dimensions after scaling"
                 foreground = foreground.resize((o_w, o_h), Image.LANCZOS)
                 mask = mask.resize((o_w, o_h), Image.LANCZOS)
 
-            if rotation_augment:
-                max_degrees = MAX_DEGREES  
-                while True:
-                    rot_degrees = random.randint(-max_degrees, max_degrees)
-                    foreground_tmp = foreground.rotate(rot_degrees, expand=True)
-                    mask_tmp = mask.rotate(rot_degrees, expand=True)
-                    o_w, o_h = foreground_tmp.size
-                    if  w-o_w > 0 and h-o_h > 0:
-                        break
-                mask = mask_tmp
-                foreground = foreground_tmp
-
             # Compare current mask with all previous masks to avoid excess occlusion
             xmin, xmax, ymin, ymax = get_annotation_from_mask(mask)
             for placement_attempt in range(MAX_OBJECTWISE_ATTEMPTS_TO_SYNTHESIZE):
-                print('\t\tAnother object placement attempt')
+                print('\t\tStarting an object placement attempt...')
                 x = random.randint(int(-MAX_TRUNCATION_FRACTION*o_w), int(w-o_w+MAX_TRUNCATION_FRACTION*o_w))
                 y = random.randint(int(-MAX_TRUNCATION_FRACTION*o_h), int(h-o_h+MAX_TRUNCATION_FRACTION*o_h))
 
@@ -293,7 +292,7 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
                 for prev_obj in already_syn_objs:
                     mask_array = np.pad(PIL2array1C(mask), ((h-y+o_h, y), (x, w-x+o_w)), mode='constant', constant_values=0)
                     if mask_overlap(mask_array, prev_obj):
-                        print('\t\t\tOcclusion found, trying again')
+                        print('\t\t\tOcclusion found, trying again...')
                         obj_placement_is_valid = False
                         break
 
@@ -301,7 +300,7 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
                     break
                 
             else: # if we reach here, it means we could not place the object after MAX_OBJECTWISE_ATTEMPTS_TO_SYNTHESIZE
-                print(f'\t\t\tCould not place object {obj[0]} after {MAX_OBJECTWISE_ATTEMPTS_TO_SYNTHESIZE} attempts')
+                print(f'\t\tCould not place object {obj[0]} after {MAX_OBJECTWISE_ATTEMPTS_TO_SYNTHESIZE} attempts')
                 all_objects_success = False
                 break
                 
@@ -324,9 +323,6 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
 
     # Start pasting and blending objects
     for idx, obj_n_mask in enumerate(objs_n_masks):
-        print('\tBlending object now')
-        start_time = time.time()
-        
         obj_label, (x, y, xmin, ymin, xmax, ymax), foreground, mask = obj_n_mask
         # Paste image on different background copies according to the different blending modes
         for i in range(len(blending_list)):
@@ -335,28 +331,20 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
 
             elif blending_list[i] == 'poisson':
                 offset = (x, y)
-                target_tensor = TF.to_tensor(synth_images[i]).permute(1,2,0)
-                source_tensor = TF.to_tensor(foreground).permute(1,2,0)
-                mask_tensor = TF.to_tensor(mask).squeeze(0) #PIL2array1C(mask)
-                source_tensor, mask_tensor, offset_adj = trim_mask(target_tensor, source_tensor, mask_tensor, offset)
-                offset_adj = torch.tensor(offset_adj[::-1])
-                print(offset_adj)
-                background_array = pietorch.blend(target_tensor, source_tensor, mask_tensor, offset_adj, False, channels_dim=2)
-                
-                # save pytorch tensors to file
-                torch.save(target_tensor, 'target_tensor.pt')
-                torch.save(source_tensor, 'source_tensor.pt')
-                torch.save(mask_tensor, 'mask_tensor.pt')
-                torch.save(background_array, 'background_array.pt')
-
-                synth_images[i] = Image.fromarray((background_array.numpy()*255).astype(np.uint8), 'RGB')
+                target = PIL2array3C(synth_images[i])
+                source = PIL2array3C(foreground)
+                mask_arr = PIL2array1C(mask)
+                source, mask_arr, offset = trim_img_n_mask(target, source, mask_arr, offset)
+                mask_arr = (mask_arr*255).astype(np.uint8)
+                center = (offset[0] + source.shape[1]//2, offset[1] + source.shape[0]//2)
+                mixed = cv2.seamlessClone(source, target, mask_arr.copy(), center, cv2.NORMAL_CLONE)
+                synth_images[i] = Image.fromarray(mixed.astype(np.uint8), 'RGB')
 
             elif blending_list[i] == 'gaussian':
                 synth_images[i].paste(foreground, (x, y), Image.fromarray(cv2.GaussianBlur(PIL2array1C(mask),(5,5),2)))
 
             elif blending_list[i] == 'box':
                 synth_images[i].paste(foreground, (x, y), Image.fromarray(cv2.blur(PIL2array1C(mask),(3,3))))
-        print(f'\tBlending took {time.time() - start_time} seconds')
 
         # Save annotations in text file
         labels = [obj[1] for obj in objects]
@@ -368,13 +356,19 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
         string = f"{label_num} {(xmin+xmax)/(2*w)} {(ymin+ymax)/(2*h)} {(xmax-xmin)/w} {(ymax-ymin)/h}\n"
         with open(anno_file, "a") as f:
             f.write(string)
-    
+
+    print(f'Creating image with all objects took {time.time() - start_time} seconds')
+    print('Saving images now...')
+    start_time = time.time()
+
     # Save images
     for i in range(len(blending_list)):
         # blend all objects at once for motion blur
         if blending_list[i] == 'motion':
             synth_images[i] = LinearMotionBlur3C(PIL2array3C(synth_images[i]))
         synth_images[i].save(img_file.replace('none', blending_list[i]))
+
+    print(f'Saving images took {time.time() - start_time} seconds')
    
 def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_augment, dont_occlude_much, add_distractors):
     '''Creates list of objects and distrctor objects to be pasted on what images.
@@ -390,7 +384,6 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
         dont_occlude_much(bool): Generate images with occlusion
         add_distractors(bool): Add distractor objects whose annotations are not required 
     '''
-    print('Collecting background images...')
     w = WIDTH
     h = HEIGHT
     background_dir = BACKGROUND_DIR
@@ -469,7 +462,6 @@ def init_worker():
  
 def generate_synthetic_dataset(args):
     ''' Generate synthetic dataset according to given args '''
-    print('Collecting image file names...')
     img_files = args.num * glob.glob(os.path.join(args.root, '*', 'images', '*'))
     random.shuffle(img_files)
     labels = [img_file.split('/')[-3] for img_file in img_files]
@@ -499,9 +491,9 @@ if __name__ == '__main__':
     parser.add_argument("--selected",
       help="Keep only selected instances in the test dataset. Default is to keep all instances in the root directory", action="store_true")
     parser.add_argument("--scale",
-      help="Add scale augmentation.Default is to add scale augmentation.", action="store_false")
+      help="Add scale augmentation.Default is to add scale augmentation.", action="store_true")
     parser.add_argument("--rotation",
-      help="Add rotation augmentation.Default is to add rotation data augmentation.", action="store_false")
+      help="Add rotation augmentation.Default is to add rotation data augmentation.", action="store_true")
     parser.add_argument("--num",
       help="Number of times each image will be in dataset", default=1, type=int)
     parser.add_argument("--dont_occlude_much",
@@ -510,4 +502,5 @@ if __name__ == '__main__':
       help="Add distractors objects. Default is to not use distractors", action="store_true")
     args = parser.parse_args()
     
+    print(f'Generating dataset with scale={args.scale}, rotation={args.rotation}, dont_occlude_much={args.dont_occlude_much}, add_distractors={args.add_distractors}')
     generate_synthetic_dataset(args)
