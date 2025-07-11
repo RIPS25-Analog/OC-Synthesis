@@ -528,8 +528,8 @@ def gen_syn_data(
         #for i in range(len(background_files)):
         #    bg_file = background_files[i]
         for blur in BLENDING_LIST:
-            img_file = os.path.join(img_dir, f"{idx}_{blur}{OBJECT_STRING}")
-            anno_file = os.path.join(anno_dir, f"{IMAGE_NAME_STRING}{idx}.txt") #xml
+            img_file = os.path.join(img_dir, f"{IMAGE_NAME_STRING}{idx}_{blur}.jpg")
+            anno_file = os.path.join(anno_dir, f"{IMAGE_NAME_STRING}{idx}_{blur}.txt") 
             params = (objects, distractor_objects, img_file, anno_file, bg_file)
             params_list.append(params)
             img_files.append(img_file)
@@ -578,7 +578,7 @@ def generate_synthetic_dataset():
     
     write_labels_file(OUT_DIR, labels)
 
-    anno_dir = os.path.join(OUT_DIR, 'labels')
+    anno_dir = os.path.join(OUT_DIR, 'darknet')
     img_dir = os.path.join(OUT_DIR, 'images')
     if not os.path.exists(os.path.join(anno_dir)):
         os.makedirs(anno_dir)

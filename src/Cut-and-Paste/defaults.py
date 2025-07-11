@@ -1,6 +1,5 @@
 # Paths and names
-VERSION = 0.2
-FOLDER_NAME = 'cut-and-paste-v' + str(VERSION)
+FOLDER_NAME = 'cut-and-paste-v0'
 
 BACKGROUND_DIR = 'data/raw/background'
 OBJECT_DIR = 'data/raw/objects'
@@ -21,7 +20,7 @@ IMAGE_NAME_STRING = f'img_{FOLDER_NAME}_'
 SELECTED = False # Keep only selected instances in the test dataset. Default is to keep all instances in the root directory
 SCALE = True # Set to true if to add scale augmentation
 ROTATION = True # Set to true if to add rotation augmentation
-NUM = 25 # Number of times each image will be in dataset
+NUM = 5 # Number of times each image will be in dataset
 DONT_OCCLUDE = False # Set to true if objects should not occlude each other
 ADD_DISTRACTORS = False # Set to true if distractor objects should be added to
 
