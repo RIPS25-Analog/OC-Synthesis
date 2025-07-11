@@ -2,7 +2,7 @@
 # Fill this according to own setup
 BACKGROUND_DIR = '/home/coraguo/RIPS25-AnalogDevices-ObjectDetection/Cut-and-Paste/backgrounds'
 BACKGROUND_GLOB_STRING = '*.jpg'
-POISSON_BLENDING_DIR = '/home/coraguo/RIPS25-AnalogDevices-ObjectDetection/Cut-and-Paste/pb'
+POISSON_BLENDING_DIR = '/home/coraguo/RIPS25-AnalogDevices-ObjectDetection/backups/pb'
 SELECTED_LIST_FILE = 'demo_data_dir/selected.txt'
 DISTRACTOR_LIST_FILE = 'demo_data_dir/neg_list.txt' 
 DISTRACTOR_DIR = 'demo_data_dir/distractor_objects_dir/'

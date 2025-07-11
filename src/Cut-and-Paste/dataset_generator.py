@@ -148,11 +148,7 @@ def get_annotation_from_mask_file(mask_file, scale=1.0):
         else:
             return -1, -1, -1, -1
     else:
-<<<<<<< HEAD
         print ("%s not found. Using empty mask instead."%mask_file)
-=======
-        print("%s not found. Using empty mask instead." % mask_file)
->>>>>>> main
         return -1, -1, -1, -1
 
 def get_annotation_from_mask(mask):
@@ -268,11 +264,8 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
     if 'none' not in img_file:
         return 
     
-<<<<<<< HEAD
+
     print ("Working on %s" % img_file)
-=======
-    print("Working on %s" % img_file)
->>>>>>> main
     if os.path.exists(anno_file):
         return anno_file
     
@@ -412,14 +405,8 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
     background_dir = BACKGROUND_DIR
     background_files = glob.glob(os.path.join(background_dir, BACKGROUND_GLOB_STRING))
    
-<<<<<<< HEAD
     print ("Number of background images : %s"%len(background_files) )
     img_labels = list(zip(img_files, labels))
-=======
-    print("Number of background images : %s" % len(background_files)) 
-    img_labels = zip(img_files, labels)
-    img_labels = list(img_labels)  # Convert zip object to list for Python 3
->>>>>>> main
     random.shuffle(img_labels)
 
     if add_distractors:
@@ -434,11 +421,7 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
         random.shuffle(distractor_files)
     else:
         distractor_files = []
-<<<<<<< HEAD
     print ("List of distractor files collected: %s" % distractor_files)
-=======
-    print("List of distractor files collected: %s" % distractor_files)
->>>>>>> main
 
     idx = 0
     img_files = []
@@ -456,11 +439,7 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
             n = min(random.randint(MIN_NO_OF_DISTRACTOR_OBJECTS, MAX_NO_OF_DISTRACTOR_OBJECTS), len(distractor_files))
             for i in range(n):
                 distractor_objects.append(random.choice(distractor_files))
-<<<<<<< HEAD
             print ("Chosen distractor objects: %s" % distractor_objects)
-=======
-            print("Chosen distractor objects: %s" % distractor_objects)
->>>>>>> main
 
         idx += 1
         bg_file = random.choice(background_files)
@@ -477,11 +456,7 @@ def gen_syn_data(img_files, labels, img_dir, anno_dir, scale_augment, rotation_a
     try:
         p.map(partial_func, params_list)
     except KeyboardInterrupt:
-<<<<<<< HEAD
         print ("....\nCaught KeyboardInterrupt, terminating workers")
-=======
-        print("....\nCaught KeyboardInterrupt, terminating workers")
->>>>>>> main
         p.terminate()
     else:
         p.close()
