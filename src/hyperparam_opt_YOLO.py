@@ -22,12 +22,13 @@ def train_with_wandb(config=None):
             'box': config.box,
             'cls': config.cls,
             'dfl': config.dfl,
-            'nbs': config.nbs,
+            # 'nbs': config.nbs,
             'dropout': config.dropout,
             'batch': config.batch,
             'imgsz': config.imgsz,
             'epochs': config.epochs,
             'freeze': config.freeze,
+            'val': False, # disable periodic validation during training
         }
         
         finetuner = YOLOfinetuner(
@@ -36,14 +37,10 @@ def train_with_wandb(config=None):
             **train_kwargs
         )
         
-        trainval_results = finetuner.train_model() # model evaluated on some arbitrary validation set
+        val_results = finetuner.train_model() # model evaluated on some arbitrary validation set
+        
+        del finetuner # maybe clear memory?
 
-        evaluator = YOLOevaluator(model=finetuner.model,
-                                  data_path=config.data_path,
-                                  data_split='val')  # Evaluate on validation set
-        
-        val_results = evaluator.evaluate_model()  # Evaluate the model
-        
         metrics_to_log = {}
         
         # Extract common YOLO metrics
@@ -53,7 +50,7 @@ def train_with_wandb(config=None):
         
         wandb.log(metrics_to_log)
 
-def run_hyperparameter_optimization(project_name, data_path, model_path, sweep_count=50, epochs=100):
+def run_hyperparameter_optimization(project_name, data_path, model_path, sweep_count=50, epochs=20):
     """Run hyperparameter optimization using WandB sweeps."""
     
     # Create sweep configuration
@@ -81,9 +78,9 @@ def run_hyperparameter_optimization(project_name, data_path, model_path, sweep_c
             'dropout': {'distribution': 'uniform', 'min': 0.0, 'max': 0.5},
             
             # Training parameters
-            'batch': {'values': [8, 16, 32, 64]},
-            'imgsz': {'values': [416, 512, 640, 768]},
-            'nbs': {'values': [32, 64, 128]},
+            'batch': {'values': [16, 24, 32]},
+            'imgsz': {'values': [320, 480, 640, 800]},
+            # 'nbs': {'values': [32, 64, 128]},
             
             # Architecture parameters
             'freeze': {'distribution': 'int_uniform', 'min': 20, 'max': 23},
@@ -119,7 +116,7 @@ if __name__ == "__main__":
                        help='Number of hyperparameter combinations to try.')
     parser.add_argument('--metric_name', type=str, default='final_mAP50',
                        help='Metric to optimize (final_mAP50, final_mAP50-95).')
-    parser.add_argument('--epochs', type=int, default=100,
+    parser.add_argument('--epochs', type=int, default=20,
                        help='Number of epochs for training in each hyperparameter run.')
     
     args = parser.parse_args()

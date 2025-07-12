@@ -130,7 +130,7 @@ def write_yaml_file(exp_dir, labels, label_map):
 		labels(list): List of labels. This will be useful while training an object detector
 	'''
 	unique_labels = sorted(set(labels))
-	yaml_filename = f'{exp_dir.split("/")[-2]}.yaml'
+	yaml_filename = f'{'_'.join(exp_dir.split("/")[-2:])}.yaml' # join raw_data and processed_data name
 	yaml_path = os.path.join('/home/data', yaml_filename)
 	
 	data = {
@@ -223,7 +223,7 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
 			o_w, o_h = foreground.size
 
 			if rotation_augment:
-				logging.info(f'\t\tRotating object of size {o_w}x{o_h}...')
+				# logging.info(f'\t\tRotating object of size {o_w}x{o_h}...')
 				rot_degrees = random.randint(-MAX_DEGREES, MAX_DEGREES)
 
 				foreground = foreground.rotate(rot_degrees, expand=True)
@@ -240,19 +240,19 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
 				if xmin == -1 or ymin == -1 or xmax-xmin < MIN_WIDTH or ymax-ymin < MIN_HEIGHT :
 					raise ValueError(f"Invalid mask for object {obj[0]}: xmin={xmin}, ymin={ymin}, xmax={xmax}, ymax={ymax}")
 
-				logging.info(f'\t\tObject {obj[0]} mask annotation: xmin={xmin}, ymin={ymin}, xmax={xmax}, ymax={ymax}')
-				logging.info(f'\t\tObject {obj[0]} dilated mask annotation: xmin={xmin_d}, ymin={ymin_d}, xmax={xmax_d}, ymax={ymax_d}')
+				# logging.info(f'\t\tObject {obj[0]} mask annotation: xmin={xmin}, ymin={ymin}, xmax={xmax}, ymax={ymax}')
+				# logging.info(f'\t\tObject {obj[0]} dilated mask annotation: xmin={xmin_d}, ymin={ymin_d}, xmax={xmax_d}, ymax={ymax_d}')
 
-				logging.info(f'\t\t Foreground size before crop: {foreground.size} | Dilated foreground size before crop: {dilated_foreground.size}')
-				logging.info(f'\t\t Mask size before crop: {mask.size} | Dilated mask size before crop: {dilated_mask.size}')
+				# logging.info(f'\t\t Foreground size before crop: {foreground.size} | Dilated foreground size before crop: {dilated_foreground.size}')
+				# logging.info(f'\t\t Mask size before crop: {mask.size} | Dilated mask size before crop: {dilated_mask.size}')
 			
 				foreground = foreground.crop((xmin, ymin, xmax, ymax))
 				dilated_foreground = dilated_foreground.crop((xmin_d, ymin_d, xmax_d, ymax_d))
 				mask = mask.crop((xmin, ymin, xmax, ymax))
 				dilated_mask = dilated_mask.crop((xmin_d, ymin_d, xmax_d, ymax_d))
 
-				logging.info(f'\t\t Foreground size after crop: {foreground.size} | Dilated foreground size after crop: {dilated_foreground.size}')
-				logging.info(f'\t\t Mask size after crop: {mask.size} | Dilated mask size after crop: {dilated_mask.size}')
+				# logging.info(f'\t\t Foreground size after crop: {foreground.size} | Dilated foreground size after crop: {dilated_foreground.size}')
+				# logging.info(f'\t\t Mask size after crop: {mask.size} | Dilated mask size after crop: {dilated_mask.size}')
 
 				o_w, o_h = foreground.size
 				logging.info(f'\t\tObject rotated by {rot_degrees} degrees, new size: {o_w}x{o_h}')
@@ -351,17 +351,17 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
 				offset = (x, y)
 				target = PIL2array3C(synth_images[i])
 
-				source = PIL2array3C(foreground)
-				source, mask_arr, offset = trim_img_n_mask(target, source, PIL2array1C(mask), offset)
-				mask_arr = (mask_arr*255).astype(np.uint8)
-				center = (offset[0] + source.shape[1]//2, offset[1] + source.shape[0]//2)
-				mixed = cv2.seamlessClone(source.copy(), target.copy(), mask_arr, center, cv2.NORMAL_CLONE)
-
-				# source = PIL2array3C(dilated_foreground)
-				# source, dilated_mask_arr, offset = trim_img_n_mask(target, source, PIL2array1C(dilated_mask), offset)
-				# dilated_mask_arr = (dilated_mask_arr*255).astype(np.uint8)
+				# source = PIL2array3C(foreground)
+				# source, mask_arr, offset = trim_img_n_mask(target, source, PIL2array1C(mask), offset)
+				# mask_arr = (mask_arr*255).astype(np.uint8)
 				# center = (offset[0] + source.shape[1]//2, offset[1] + source.shape[0]//2)
-				# mixed = cv2.seamlessClone(source.copy(), target.copy(), dilated_mask_arr, center, cv2.NORMAL_CLONE)
+				# mixed = cv2.seamlessClone(source.copy(), target.copy(), mask_arr, center, cv2.NORMAL_CLONE)
+
+				source = PIL2array3C(dilated_foreground)
+				source, dilated_mask_arr, offset = trim_img_n_mask(target, source, PIL2array1C(dilated_mask), offset)
+				dilated_mask_arr = (dilated_mask_arr*255).astype(np.uint8)
+				center = (offset[0] + source.shape[1]//2, offset[1] + source.shape[0]//2)
+				mixed = cv2.seamlessClone(source.copy(), target.copy(), dilated_mask_arr, center, cv2.NORMAL_CLONE)
 
 				global FIRST_TIME
 				if not PARALLELIZE and FIRST_TIME:
@@ -462,7 +462,7 @@ def gen_syn_data(img_files, classes, img_dir, anno_dir, label_map, scale_augment
 		try:
 			p.map(partial_func, params_list)
 		except KeyboardInterrupt:
-			logging.info("....\nCaught KeyboardInterrupt, terminating workers")
+			logging.warning("....\nCaught KeyboardInterrupt, terminating workers")
 			p.terminate()
 		else:
 			p.close()
