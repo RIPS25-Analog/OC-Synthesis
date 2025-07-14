@@ -360,7 +360,19 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
 				source = PIL2array3C(dilated_foreground)
 				source, dilated_mask_arr, offset = trim_img_n_mask(target, source, PIL2array1C(dilated_mask), offset)
 				dilated_mask_arr = (dilated_mask_arr*255).astype(np.uint8)
+				
+				assert (offset[0] + source.shape[1] < w) and (offset[1] + source.shape[0] < h), \
+					f"Offset {offset} with source shape {source.shape} exceeds target dimensions {target.shape}"
+				
 				center = (offset[0] + source.shape[1]//2, offset[1] + source.shape[0]//2)
+
+				
+				assert source.shape[0] > 0 and source.shape[1] > 0, f"Source image is empty for object {obj_class} at index {idx}"
+				assert target.shape[0] > 0 and target.shape[1] > 0, f"Target image is empty for object {obj_class} at index {idx}"
+				assert dilated_mask_arr.shape[0] > 0 and dilated_mask_arr.shape[1] > 0, f"Dilated mask is empty for object {obj_class} at index {idx}"
+				assert source.shape[0] == dilated_mask_arr.shape[0] and source.shape[1] == dilated_mask_arr.shape[1], \
+					f"Source and dilated mask shapes do not match for object {obj_class} at index {idx}: {source.shape} vs {dilated_mask_arr.shape}"
+				
 				mixed = cv2.seamlessClone(source.copy(), target.copy(), dilated_mask_arr, center, cv2.NORMAL_CLONE)
 
 				global FIRST_TIME

@@ -58,6 +58,7 @@ if __name__ == "__main__":
     parser.add_argument('--dropout', type=float, default=0.0, help='Use dropout regularization.')
     parser.add_argument('--batch', type=int, default=16, help='Batch size.')
     parser.add_argument('--imgsz', type=int, default=640, help='Image size.')
+    parser.add_argument('--multi_scale', action='store_true', help='Enable multi-scale training.')
     
     args = parser.parse_args()
 

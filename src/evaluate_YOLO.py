@@ -79,10 +79,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    args.classes = list(map(int, args.classes.split(',') if args.classes else None))
+    args.classes = list(map(int, args.classes.split(','))) if args.classes else None
 
     evaluator = YOLOevaluator(args.run_path, args.data_path,
                             args.data_split, args.model,
                             args.eval_img_size, args.classes)
     results = evaluator.evaluate_model()
-    print(results)  # Print the evaluation results
+    # print(results)  # Print the evaluation results

@@ -28,6 +28,7 @@ def train_with_wandb(config=None):
             'imgsz': config.imgsz,
             'epochs': config.epochs,
             'freeze': config.freeze,
+            'multi_scale': config.multi_scale,  # Enable multi-scale training
             'val': False, # disable periodic validation during training
         }
         
