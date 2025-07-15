@@ -1,6 +1,7 @@
 # custom additions
 *.pt
 data/*/
+to-share/data/
 dataold/
 download/
 .vscode/

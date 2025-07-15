@@ -9,8 +9,6 @@ class YOLOfinetuner:
         self.model = YOLO(kwargs.get('model_path', 'yolo11n.pt'), task='detect')
         print(self.model.info())
         self.data_path = kwargs.get('data_path')
-        self.epochs = kwargs.get('epochs')
-        self.freeze = kwargs.get('freeze')
 
         del kwargs['model_path']
         del kwargs['data_path']
