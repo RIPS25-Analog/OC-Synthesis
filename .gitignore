@@ -1,7 +1,7 @@
 # custom additions
 *.pt
 data/*/
-to-share/data/
+memleak-reproduced/data/
 dataold/
 download/
 .vscode/

@@ -1,5 +1,6 @@
 import gc
 import torch
+import argparse
 import wandb
 from ultralytics import YOLO
 
@@ -40,6 +41,7 @@ def train_with_wandb(config=None):
             'epochs': config.epochs,
             'freeze': config.freeze,
             'nbs': 64,
+            'workers': config.n_workers,
             'val': False, # disable periodic validation during training
         }
         
@@ -50,7 +52,8 @@ def train_with_wandb(config=None):
         )
         
         val_results = finetuner.train_model() # model evaluated on some arbitrary validation set
-        
+
+    
         metrics_to_log = {}
         
         # Extract common YOLO metrics
@@ -65,7 +68,7 @@ def train_with_wandb(config=None):
     # torch.cuda.empty_cache()
     # torch.cuda.ipc_collect()
 
-def run_hyperparameter_optimization(project_name, data_path, model_path, sweep_count=50, epochs=20, batch_sizes=[8], sweep_name='Sweep'):
+def run_hyperparameter_optimization(project_name, data_path, model_path, sweep_count=50, epochs=20, batch_sizes=[8], n_workers=[8], sweep_name='Sweep'):
     """Run hyperparameter optimization using WandB sweeps."""
     
     # Create sweep configuration
@@ -76,7 +79,9 @@ def run_hyperparameter_optimization(project_name, data_path, model_path, sweep_c
         'parameters': {
             'batch': {'values': batch_sizes},
             'imgsz': {'values': [640]},
-            'freeze': {'values': [23]}
+            'freeze': {'values': [23]},
+            'dummy':{'values':list(range(10))},
+            'n_workers': {'values': n_workers}
         }
     }
     
@@ -96,13 +101,29 @@ def run_hyperparameter_optimization(project_name, data_path, model_path, sweep_c
     print("Hyperparameter optimization completed!")
 
 if __name__ == "__main__":
+    argparser = argparse.ArgumentParser(description='Run hyperparameter optimization for YOLO model training.')
+    argparser.add_argument('--nworkers', type=int, default=8, help='Number of workers for data loading.')
+    args = argparser.parse_args()
+    
     project_name = 'CutNPaste-memleak-investigation'
     data_path = 'cnp-v0-15365.yaml'
     model_path = 'yolo11n.pt'
     sweep_count = 5
     epochs = 1
-    batch_sizes = [8,16,32,64,128]
+    batch_sizes = [32] #[8,16,32,64,128]
+    n_workers = [args.nworkers]
 
+    run_hyperparameter_optimization(
+        project_name=project_name,
+        data_path=data_path,
+        model_path=model_path,
+        sweep_count=sweep_count,
+        epochs=epochs,
+        batch_sizes=batch_sizes,
+        n_workers=n_workers,
+        sweep_name=f'nworkers-{args.nworkers}'
+    )
+    
     # ## Run in increasing batch size order
     # run_hyperparameter_optimization(
     #     project_name=project_name,
