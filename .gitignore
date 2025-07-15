@@ -6,6 +6,7 @@ download/
 XmlToTxt-master/
 wandb/
 runs/
+src/view_images.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
