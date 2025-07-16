@@ -18,6 +18,7 @@ import cv2
 
 from defaults import *
 from pyblur_master.pyblur import LinearMotionBlur
+from datetime import datetime
 
 FIRST_TIME = True
 seed = 0
@@ -130,7 +131,7 @@ def write_yaml_file(exp_dir, labels, label_map):
 		labels(list): List of labels. This will be useful while training an object detector
 	'''
 	unique_labels = sorted(set(labels))
-	yaml_filename = f'{'_'.join(exp_dir.split("/")[-2:])}.yaml' # join raw_data and processed_data name
+	yaml_filename = f"{'_'.join(exp_dir.split('/')[-2:])}.yaml" # join raw_data and processed_data name
 	yaml_path = os.path.join('/home/data', yaml_filename)
 	
 	data = {
@@ -486,6 +487,7 @@ def gen_syn_data(img_files, classes, img_dir, anno_dir, label_map, scale_augment
 			
 	print('Generation complete!')
 	logging.info("Generation complete!")
+	logging.info(f'Current datetime: {datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S %Z")}')
 	
 	return img_files, anno_files
 
@@ -555,5 +557,5 @@ if __name__ == '__main__':
 	logger.setLevel(logging.INFO)
 	logging.getLogger('PIL').setLevel(logging.WARNING)
 	logging.info(f'Generating dataset with scale={args.scale}, rotation={args.rotation}, num={args.num}, dont_occlude_much={args.dont_occlude_much}, add_distractors={args.add_distractors}')
-
+	logging.info(f'Current datetime: {datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S %Z")}')
 	generate_synthetic_dataset(args)
