@@ -10,11 +10,12 @@ def train_with_wandb(config=None):
     with wandb.init(config=config):
         config = wandb.config
         
+        multi_scale_str = '--multi_scale' if config.multi_scale else ''
         project_name = f"/home/wandb-runs/{config.data.split('/')[-1].split('.')[0]}/{sweep_id}"
         
         subprocess.run(f'python src/finetune_YOLO.py --data {config.data} --model {config.model} --epochs {config.epochs}\
                         --batch {config.batch} --imgsz {config.imgsz} --freeze {config.freeze}\
-                        --project {project_name} --dont_val --no_wandb', shell=True, check=True)
+                        --project {project_name} {multi_scale_str} --dont_val --no_wandb', shell=True, check=True)
         
         train_dir_search = subprocess.run(f'find {project_name} -type d -name "train*" -printf "%T@ %p\\n" | sort -n | tail -1', 
                                 shell=True, capture_output=True, text=True)
@@ -77,7 +78,7 @@ def run_hyperparameter_optimization(project_name, data, model, sweep_count=50, e
             'batch': {'values': [32]},
             'imgsz': {'values': [640, 800, 960, 1120]},
             'eval_imgsz': {'values': [800, 960, 1280, 1600]},
-            'multi_scale': {'values': [False, True]},
+            'multi_scale': {'values': [0,1]}, # making numeric for ease of plotting in WandB
             
             # Architecture parameters
             'freeze': {'values': [8, 12, 16]}#{'distribution': 'int_uniform', 'min': 10, 'max': 20},
@@ -107,6 +108,7 @@ if __name__ == "__main__":
     parser.add_argument('--model', type=str, default='yolo11n.pt', help='Path to the YOLO model file.')
     parser.add_argument('--sweep_count', type=int, default=50, help='Number of hyperparameter combinations to try.')
     parser.add_argument('--epochs', type=int, default=20, help='Number of epochs for training in each hyperparameter run.')
+    parser.add_argument('--workers', type=int, default=8, help='Number of workers for data loading.')
     args = parser.parse_args()
     
     # Validate required arguments
