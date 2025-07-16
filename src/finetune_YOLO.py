@@ -2,43 +2,29 @@ from ultralytics import YOLO
 import argparse
 from ultralytics import settings
 
-settings.update({"wandb": False}) # disable WandB so it doesn't interfere if doing hyperparameter sweeps
-
 class YOLOfinetuner:
     def __init__(self, **kwargs):
-        self.model = YOLO(kwargs.get('model_path', 'yolo11n.pt'), task='detect')
+        self.model = YOLO(kwargs.get('model', 'yolo11n.pt'), task='detect')
         print(self.model.info())
-        self.data_path = kwargs.get('data_path')
-        self.epochs = kwargs.get('epochs')
-        self.freeze = kwargs.get('freeze')
 
-        del kwargs['model_path']
-        del kwargs['data_path']
+        self.data = kwargs.get('data')
+        if not kwargs.get('project', None):
+            kwargs['project'] = '/home/wandb-runs/' + self.data.split('/')[-1].split('.')[0]
+
+        del kwargs['model']
         self.train_params = kwargs
-
+        
     def train_model(self):
-        project_name = '/home/wandb-runs/' + self.data_path.split('/')[-1].split('.')[0]
-        
-        # Prepare training parameters
-        train_args = {
-            'data': self.data_path,
-            'project': project_name
-        }
-        
-        # Add additional hyperparameters
-        train_args.update(self.train_params)
-        
-        results = self.model.train(**train_args)
+        results = self.model.train(**self.train_params)
         return results
     
 if __name__ == "__main__":
-    settings.update({"wandb": True}) # enable WandB for standalone finetuning (not sweeps)
-    
     parser = argparse.ArgumentParser(description='Train a YOLO model with specified parameters.',
                                       formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--model_path', type=str, default='yolo11n.pt', help='Path to the YOLO model file.')
-    parser.add_argument('--data_path', type=str, required=True, help='Path to the dataset configuration file.')
+    parser.add_argument('--model', type=str, default='yolo11n.pt', help='Path to the YOLO model file.')
+    parser.add_argument('--data', type=str, required=True, help='Path to the dataset configuration file.')
     parser.add_argument('--epochs', type=int, default=100, help='Number of training epochs.')
+    parser.add_argument('--project', type=str, default='yolo_finetune', help='Project name for saving results.')
     
     # Additional hyperparameters
     parser.add_argument('--freeze', type=int, default=23, help='Number of layers to freeze during training.')
@@ -57,11 +43,23 @@ if __name__ == "__main__":
     parser.add_argument('--batch', type=int, default=16, help='Batch size.')
     parser.add_argument('--imgsz', type=int, default=640, help='Image size.')
     parser.add_argument('--multi_scale', action='store_true', help='Enable multi-scale training.')
+    parser.add_argument('--workers', type=int, default=8, help='Number of workers for data loading.')
+    parser.add_argument('--no_wandb', action='store_true', help='Disable Weights & Biases logging.')
+    parser.add_argument('--dont_val', action='store_true', help='Dummy argument for testing purposes.')
     
     args = parser.parse_args()
+
+    settings.update({"wandb": True})
+    if args.no_wandb:
+        print("Intra-run Weights & Biases logging is disabled.")
+        settings.update({"wandb": False}) # enable WandB for standalone finetuning (not sweeps)
+    del args.no_wandb  # Remove no_wandb from args to avoid passing it to YOLO
+
+    args.val = not args.dont_val  # Convert dont_val to val
+    del args.dont_val  # Remove dont_val from args
 
     # Convert args into dictionary
     train_kwargs = vars(args)
     finetuner = YOLOfinetuner(**train_kwargs)
     results = finetuner.train_model()
-    print(results)  # Print the training results
+    # print(results)  # Print the training results

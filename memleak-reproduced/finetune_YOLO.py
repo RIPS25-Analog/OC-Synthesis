@@ -2,12 +2,11 @@ from ultralytics import YOLO
 import argparse
 from ultralytics import settings
 
-# settings.update({"wandb": False}) # disable WandB so it doesn't interfere if doing hyperparameter sweeps
-
 class YOLOfinetuner:
     def __init__(self, **kwargs):
         self.model = YOLO(kwargs.get('model', 'yolo11n.pt'), task='detect')
         print(self.model.info())
+
         self.data = kwargs.get('data') 
         if not kwargs.get('project', None):
             kwargs['project'] = '/home/wandb-runs/' + self.data.split('/')[-1].split('.')[0]
@@ -26,8 +25,7 @@ if __name__ == "__main__":
     parser.add_argument('--data', type=str, required=True, help='Path to the dataset configuration file.')
     parser.add_argument('--epochs', type=int, default=100, help='Number of training epochs.')
     parser.add_argument('--project', type=str, default='yolo_finetune', help='Project name for saving results.')
-    parser.add_argument('--val', type=bool, default=True, help='Whether to validate during training.')
-
+    
     # Additional hyperparameters
     parser.add_argument('--freeze', type=int, default=23, help='Number of layers to freeze during training.')
     parser.add_argument('--lr0', type=float, default=0.01, help='Initial learning rate.')
@@ -64,4 +62,4 @@ if __name__ == "__main__":
     train_kwargs = vars(args)
     finetuner = YOLOfinetuner(**train_kwargs)
     results = finetuner.train_model()
-    print(results)  # Print the training results
+    # print(results)  # Print the training results
