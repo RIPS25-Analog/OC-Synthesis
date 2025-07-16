@@ -2,6 +2,8 @@
 *.pt
 data/*/
 
+Objaverse_data/
+data_blocks/
 obj/
 help/
 appdata/

@@ -1,0 +1,1 @@
+Error converting /home/coraguo/RIPS25-AnalogDevices-ObjectDetection/src/3d_C_P/Objaverse_data/drill/models/drill_001_9ea0766e3d7a49a0a1f19f4d65c103de.glb: 'Path3D' object has no attribute 'visual'
