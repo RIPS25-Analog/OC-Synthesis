@@ -231,3 +231,5 @@ cython_debug/
 src/3d_C_P/wget-log
 src/3d_C_P/wget-log.1
 src/3d_C_P/wget-log.2
+
+src/3d_C_P/Objaverse_data_resized
