@@ -16,6 +16,9 @@ class YOLOevaluator:
             self.model_path = kwargs.get('model')
             self.model = YOLO(self.model_path, task='detect')
             assert kwargs.get('data', None) is not None, "If a model is provided, data must also be specified."
+
+        if not kwargs.get('project', None):
+            kwargs['project'] = '/home/wandb-runs/' + kwargs['data'].split('/')[-1].split('.')[0]
         
         del kwargs['run']
         del kwargs['model']
@@ -64,14 +67,15 @@ class YOLOevaluator:
         return results
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Evaluate a YOLO model with specified parameters.')
+    parser = argparse.ArgumentParser(description='Evaluate a YOLO model with specified parameters.',
+                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--run', type=str, default='yolo11n.pt', help='Path to the YOLO run directory (to fetch best weights from).')
-    parser.add_argument('--batch', type=int, default=32, help='Batch size for evaluation (default: 32).')
-    parser.add_argument('--imgsz', type=int, default=640, help='Image size for evaluation (default: 640).')
-    parser.add_argument('--project', type=str, default='runs', help='Project name for saving evaluation results (default: runs).')
+    parser.add_argument('--batch', type=int, default=32, help='Batch size for evaluation.')
+    parser.add_argument('--imgsz', type=int, default=640, help='Image size for evaluation.')
+    parser.add_argument('--project', type=str, default=None, help='Project name for saving evaluation results.')
     
     parser.add_argument('--data', type=str, required=False, help='Path to the dataset configuration file (YAML). (Optional, will be fetched from the run YAML if not provided).')
-    parser.add_argument('--split', type=str, default='val', choices=['train', 'val', 'test'], help='Specify the dataset split to evaluate on (default: val).')
+    parser.add_argument('--split', type=str, default='val', choices=['train', 'val', 'test'], help='Specify the dataset split to evaluate on.')
     parser.add_argument('--model', type=str, default=None, help='Path to the YOLO model file (optional). If provided, data must also be specified.')
     parser.add_argument('--classes', type=str, default=None, help='Comma-separated list of class names to evaluate (default: None, evaluates all classes).')
 
