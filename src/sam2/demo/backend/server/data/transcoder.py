@@ -42,8 +42,8 @@ def transcode(
     codec = os.environ.get("VIDEO_ENCODE_CODEC", "libx264")
     crf = int(os.environ.get("VIDEO_ENCODE_CRF", "23"))
     fps = int(os.environ.get("VIDEO_ENCODE_FPS", "24"))
-    max_w = int(os.environ.get("VIDEO_ENCODE_MAX_WIDTH", "1280"))
-    max_h = int(os.environ.get("VIDEO_ENCODE_MAX_HEIGHT", "720"))
+    max_w = int(os.environ.get("VIDEO_ENCODE_MAX_WIDTH", "10000"))
+    max_h = int(os.environ.get("VIDEO_ENCODE_MAX_HEIGHT", "10000"))
     verbose = ast.literal_eval(os.environ.get("VIDEO_ENCODE_VERBOSE", "False"))
 
     normalize_video(
