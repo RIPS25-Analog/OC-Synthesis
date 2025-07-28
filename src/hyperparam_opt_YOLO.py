@@ -45,12 +45,13 @@ def train_with_wandb(config=None):
         
         wandb.log(metrics_to_log)
 
-def run_hyperparameter_optimization(project_name, data, model, sweep_count=50, epochs=20):
+def run_hyperparameter_optimization(project_name, data, model, sweep_count=50, epochs=20, sweep_name='yolo_hyperparam_opt'):
     global sweep_id
     """Run hyperparameter optimization using WandB sweeps."""
     
     # Create sweep configuration
     sweep_config = {
+        'name': sweep_name,
         'method': 'random',  # Can be 'grid', 'random', or 'bayes'
         'metric': {'name': 'mAP50', 'goal': 'maximize'},
         'parameters': {
@@ -109,6 +110,7 @@ if __name__ == "__main__":
     parser.add_argument('--sweep_count', type=int, default=50, help='Number of hyperparameter combinations to try.')
     parser.add_argument('--epochs', type=int, default=20, help='Number of epochs for training in each hyperparameter run.')
     parser.add_argument('--workers', type=int, default=8, help='Number of workers for data loading.')
+    parser.add_argument('--sweep_name', type=str, default='yolo_hyperparam_opt', help='Name of the WandB sweep.')
     args = parser.parse_args()
     
     # Validate required arguments
@@ -123,5 +125,6 @@ if __name__ == "__main__":
         data=args.data,
         model=args.model,
         sweep_count=args.sweep_count,
-        epochs=args.epochs
+        epochs=args.epochs,
+        sweep_name=args.sweep_name
     )

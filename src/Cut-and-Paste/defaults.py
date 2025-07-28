@@ -6,7 +6,7 @@ INVERTED_MASK = True # Set to true if white pixels represent background
 SELECTED_CLASSES = ['hammer', 'screwdriver', 'wrench'] # these classes get labelles as 0,1,...
 
 # Parameters for generator
-NUMBER_OF_WORKERS = 14
+NUMBER_OF_WORKERS = 24
 BLENDING_LIST = ['gaussian','poisson', 'none', 'box', 'motion']
 TRAIN_VAL_TEST_SPLIT = [1.0, 0.0, 0.0]
 
