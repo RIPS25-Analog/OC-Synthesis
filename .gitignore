@@ -2,12 +2,12 @@
 *.pt
 data/*/
 
-Objaverse_data/
-data_blocks/
-obj/
-help/
 appdata/
+bin/
+cefclient/
+derived/
 extern/
+help/
 interprocess/
 java/
 licenses/
@@ -21,15 +21,20 @@ license_agreement.txt
 patents.txt
 trademarks.txt
 VersionInfo.xml
-env
-env.pub
 
+data/
+data1/
+objaverse/
+ml-hypersim/
 __MACOSX/
 
-bin/
+Objaverse_data/
+data_blocks/
+obj/
+src/3d_C_P/Objaverse_data_resized
+
 sunrgbd_trainval/
-mit_indoor/
-OI_subset/
+backups/
 src/Cut-and-Paste/*/
 !Cut-and-Paste/pb/
 backups/
@@ -228,8 +233,3 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
-src/3d_C_P/wget-log
-src/3d_C_P/wget-log.1
-src/3d_C_P/wget-log.2
-
-src/3d_C_P/Objaverse_data_resized
