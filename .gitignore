@@ -22,6 +22,7 @@ patents.txt
 trademarks.txt
 VersionInfo.xml
 
+backups/
 data/
 data1/
 objaverse/
@@ -29,15 +30,16 @@ ml-hypersim/
 __MACOSX/
 
 Objaverse_data/
-data_blocks/
-obj/
-src/3d_C_P/Objaverse_data_resized
+Objaverse_data_resized/
 
-sunrgbd_trainval/
-backups/
+# sunrgbd_trainval/
 src/Cut-and-Paste/*/
 !Cut-and-Paste/pb/
-backups/
+
+
+organized_yolo_datasett/
+wandb/
+annotation_quality_check/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
