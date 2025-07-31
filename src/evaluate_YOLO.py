@@ -10,14 +10,14 @@ class YOLOevaluator:
             assert run_dir is not None, "If no model is provided, run must be specified."
             self.model_path = os.path.join(run_dir, 'weights', 'best.pt')
             self.model = YOLO(self.model_path, task='detect')
-            if kwargs['data'] is None:
+            if kwargs.get('data', None) is None:
                 kwargs['data'] = self._get_data_from_model_yaml(run_dir)
         else:
             self.model_path = kwargs.get('model')
             self.model = YOLO(self.model_path, task='detect')
             assert kwargs.get('data', None) is not None, "If a model is provided, data must also be specified."
 
-        if not kwargs.get('project', None):
+        if kwargs.get('project', None) is None:
             kwargs['project'] = '/home/wandb-runs/' + kwargs['data'].split('/')[-1].split('.')[0]
         
         del kwargs['run']
@@ -64,7 +64,7 @@ class YOLOevaluator:
         with open(results_file, 'w') as file:
             yaml.dump(result_dict, file)
         
-        return results
+        return result_dict
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Evaluate a YOLO model with specified parameters.',

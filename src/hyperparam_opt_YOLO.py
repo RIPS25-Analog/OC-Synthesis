@@ -1,15 +1,12 @@
 import argparse
 import wandb
 import os
-import subprocess
-import yaml
-import gc
-import torch
+from finetune_YOLO import YOLOfinetuner
+from evaluate_YOLO import YOLOevaluator
 
 def train_with_wandb(config=None):
     """Training function to be called by WandB sweep agent."""
 
-    from finetune_YOLO import YOLOfinetuner
     with wandb.init(config=config) as run:
         config = wandb.config
     
@@ -26,35 +23,18 @@ def train_with_wandb(config=None):
                         'val': False
                         }
         
-        # arg_string = ' '.join([f'--{key} {value}' for key, value in finetune_args.items()])
-        # multi_scale_str = '--multi_scale' if config.multi_scale else ''
-        # subprocess.run(f'python src/finetune_YOLO.py {arg_string} {multi_scale_str} --dont_val --no_wandb', shell=True, check=True)
-        
         finetuner = YOLOfinetuner(**finetune_args)
-        finetuner.train_model()
+        results_train = finetuner.train_model()
         
-        # find most recently modified train folder within project_name
-        # (search for directories that do not start with "val")
-        train_dir_search = subprocess.run(f'find {project_name} -maxdepth 1 -mindepth 1 -type d ! -name "val*" -printf "%T@ %p\\n" | sort -n | tail -1', 
-                                shell=True, capture_output=True, text=True)
-        train_dir = train_dir_search.stdout.split(' ')[-1].strip()
-        assert train_dir != '', f"No train directory found in {project_name}"
-        print(f'Found train directory: {train_dir}')
-
-        subprocess.run(f'python src/evaluate_YOLO.py --run {train_dir} --batch {config.batch}\
-                        --imgsz {config.eval_imgsz} --project {project_name}', shell=True, check=True)
-
-        # find most recently modified val folder within project_name
-        val_dir_search = subprocess.run(f'find {project_name} -maxdepth 1 -mindepth 1 -type d -name "val*" -printf "%T@ %p\\n" | sort -n | tail -1', 
-                                shell=True, capture_output=True, text=True)
-        val_dir = val_dir_search.stdout.split(' ')[-1].strip()
-        assert val_dir != '', f"No val directory found in {project_name}"
-        print(f'Getting saved validation results from: {val_dir}')
-
-        # red metrics from yaml file
-        val_results_file = os.path.join(val_dir, 'simple_evaluation_results.yaml')
-        with open(val_results_file, 'r') as file:
-            val_results = yaml.safe_load(file)
+        evaluator_args = {
+            'run': str(results_train.save_dir),
+            'batch': config.batch,
+            'imgsz': config.imgsz,
+            'project': project_name,
+            'split': 'val'  # Assuming we want to evaluate on the validation set
+        }
+        evaluator = YOLOevaluator(**evaluator_args)
+        val_results = evaluator.evaluate_model()
 
         metrics_to_log = {}
         
@@ -66,30 +46,6 @@ def train_with_wandb(config=None):
         # Reinitialize WandB since Ultralytics internally initialized and finished a run
         wandb.init(reinit=True, config=config)
         wandb.log(metrics_to_log)
-
-    del finetuner.model
-    del finetuner
-    del YOLOfinetuner
-    for i in range(5): gc.collect()
-    torch.cuda.empty_cache()
-    torch.cuda.ipc_collect()
-    torch.cuda.synchronize()
-    # Kill all pt_data_loader processes
-    try:
-        # Kill data worker processes
-        subprocess.run('pkill -f pt_data_worker', shell=True, timeout=10)
-        subprocess.run('pgrep -u vagarwal -x pt_data_worker | xargs -r kill -9', shell=True, timeout=10)
-        
-        # Kill any remaining Python processes that might be data loaders
-        subprocess.run('pgrep -u vagarwal -f "python.*evaluate_YOLO" | xargs -r kill -9', shell=True, timeout=10)
-        
-        # Clean up any orphaned torch processes
-        subprocess.run('pgrep -u vagarwal -f "torch" | xargs -r kill -9', shell=True, timeout=10)
-        
-    except subprocess.TimeoutExpired:
-        print("Warning: Process cleanup timed out")
-    except Exception as e:
-        print(f"Warning: Process cleanup failed: {e}")
 
 def run_hyperparameter_optimization(project_name, data, model, sweep_count=50, epochs=20, sweep_name='yolo_hyperparam_opt'):
     global sweep_id
@@ -121,7 +77,7 @@ def run_hyperparameter_optimization(project_name, data, model, sweep_count=50, e
             # 'nbs': {'values': [32, 64, 128]},
             
             # Training parameters
-            'batch': {'values': [32]},
+            'batch': {'values': [64]},
             'imgsz': {'values': [640, 800, 960, 1120]},
             'eval_imgsz': {'values': [800, 960, 1280, 1600]},
             'multi_scale': {'values': [0,1]}, # making numeric for ease of plotting in WandB
