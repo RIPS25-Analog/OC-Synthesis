@@ -19,9 +19,10 @@ class YOLOevaluator:
 
         if kwargs.get('project', None) is None:
             kwargs['project'] = '/home/wandb-runs/' + kwargs['data'].split('/')[-1].split('.')[0]
-        
-        del kwargs['run']
-        del kwargs['model']
+
+        if 'run' in kwargs: del kwargs['run']
+        if 'model' in kwargs: del kwargs['model']
+
         self.val_params = kwargs
 
     def _get_data_from_model_yaml(self, run_dir):

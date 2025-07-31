@@ -59,10 +59,6 @@ if __name__ == "__main__":
     else:
         settings.update({"wandb": True})
     del args.no_wandb  # Remove no_wandb from args to avoid passing it to YOLO
-    
-
-    args.val = not args.dont_val  # Convert dont_val to val
-    del args.dont_val  # Remove dont_val from args
 
     # Convert args into dictionary
     train_kwargs = vars(args)

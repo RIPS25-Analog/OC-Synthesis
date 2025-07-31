@@ -77,13 +77,13 @@ def run_hyperparameter_optimization(project_name, data, model, sweep_count=50, e
             # 'nbs': {'values': [32, 64, 128]},
             
             # Training parameters
-            'batch': {'values': [64]},
-            'imgsz': {'values': [640, 800, 960, 1120]},
-            'eval_imgsz': {'values': [800, 960, 1280, 1600]},
+            'batch': {'values': [32]},
+            'imgsz': {'values': [480, 640, 800, 960]},
+            'eval_imgsz': {'values': [480, 640, 800, 960]},
             'multi_scale': {'values': [0,1]}, # making numeric for ease of plotting in WandB
             
             # Architecture parameters
-            'freeze': {'values': [8, 12, 16]}#{'distribution': 'int_uniform', 'min': 10, 'max': 20},
+            'freeze': {'values': [10, 15, 20]}#{'distribution': 'int_uniform', 'min': 10, 'max': 20},
         }
     }
     
