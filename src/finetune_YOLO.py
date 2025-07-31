@@ -1,23 +1,35 @@
 from ultralytics import YOLO
 import argparse
 from ultralytics import settings
+import wandb
+# from wandb.integration.ultralytics import add_wandb_callback
 
 class YOLOfinetuner:
     def __init__(self, **kwargs):
         self.model = YOLO(kwargs.get('model', 'yolo11n.pt'), task='detect')
         print(self.model.info())
+        # add_wandb_callback(self.model)
 
         self.data = kwargs.get('data')
         if not kwargs.get('project', None):
             kwargs['project'] = '/home/wandb-runs/' + self.data.split('/')[-1].split('.')[0]
 
-        del kwargs['model']
-        del kwargs['eval_imgsz']
+        if 'model' in kwargs:
+            del kwargs['model']
+            
         self.train_params = kwargs
         
     def train_model(self):
         results = self.model.train(**self.train_params)
-        return results
+        # return results
+        
+        del self.model
+        import gc, torch, subprocess
+        gc.collect()
+        torch.cuda.empty_cache()
+        torch.cuda.ipc_collect()
+        # Kill all pt_data_loader processes
+        subprocess.run('pgrep -u vagarwal -x pt_data_worker | xargs kill', shell=True, check=True)        
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train a YOLO model with specified parameters.',
@@ -46,9 +58,9 @@ if __name__ == "__main__":
     parser.add_argument('--multi_scale', action='store_true', help='Enable multi-scale training.')
     parser.add_argument('--workers', type=int, default=8, help='Number of workers for data loading.')
     parser.add_argument('--no_wandb', action='store_true', help='Disable Weights & Biases logging.')
-    parser.add_argument('--dont_val', action='store_true', help='Dummy argument for testing purposes.')
+    parser.add_argument('--val', type=bool, default=True, help='Enable validation during training.')
     parser.add_argument('--close_mosaic', type=int, default=10, help='Close mosaic augmentation N epochs before training ends.')
-    parser.add_argument('--eval_imgsz', type=int, default=640, help='Image size for evaluation.')
+    # parser.add_argument('--eval_imgsz', type=int, default=640, help='Image size for evaluation.')
     parser.add_argument('--name', type=str, default=None, help='Name of the training run.')
 
     args = parser.parse_args()

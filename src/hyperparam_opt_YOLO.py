@@ -3,32 +3,52 @@ import wandb
 import os
 import subprocess
 import yaml
+import gc
+import torch
 
 def train_with_wandb(config=None):
     """Training function to be called by WandB sweep agent."""
 
-    with wandb.init(config=config):
+    from finetune_YOLO import YOLOfinetuner
+    with wandb.init(config=config) as run:
         config = wandb.config
-        
-        multi_scale_str = '--multi_scale' if config.multi_scale else ''
+    
         project_name = f"/home/wandb-runs/{config.data.split('/')[-1].split('.')[0]}/{sweep_id}"
+        run_name = run.name
+        finetune_args = {'data': config.data,
+                        'model': config.model,
+                        'epochs': config.epochs,
+                        'batch': config.batch,
+                        'imgsz': config.imgsz,
+                        'freeze': config.freeze,
+                        'project': project_name,
+                        'name': run_name,
+                        'val': False
+                        }
         
-        subprocess.run(f'python src/finetune_YOLO.py --data {config.data} --model {config.model} --epochs {config.epochs}\
-                        --batch {config.batch} --imgsz {config.imgsz} --freeze {config.freeze}\
-                        --project {project_name} {multi_scale_str} --dont_val --no_wandb', shell=True, check=True)
+        # arg_string = ' '.join([f'--{key} {value}' for key, value in finetune_args.items()])
+        # multi_scale_str = '--multi_scale' if config.multi_scale else ''
+        # subprocess.run(f'python src/finetune_YOLO.py {arg_string} {multi_scale_str} --dont_val --no_wandb', shell=True, check=True)
         
-        train_dir_search = subprocess.run(f'find {project_name} -type d -name "train*" -printf "%T@ %p\\n" | sort -n | tail -1', 
+        finetuner = YOLOfinetuner(**finetune_args)
+        finetuner.train_model()
+        
+        # find most recently modified train folder within project_name
+        # (search for directories that do not start with "val")
+        train_dir_search = subprocess.run(f'find {project_name} -maxdepth 1 -mindepth 1 -type d ! -name "val*" -printf "%T@ %p\\n" | sort -n | tail -1', 
                                 shell=True, capture_output=True, text=True)
         train_dir = train_dir_search.stdout.split(' ')[-1].strip()
+        assert train_dir != '', f"No train directory found in {project_name}"
         print(f'Found train directory: {train_dir}')
 
         subprocess.run(f'python src/evaluate_YOLO.py --run {train_dir} --batch {config.batch}\
                         --imgsz {config.eval_imgsz} --project {project_name}', shell=True, check=True)
 
-        # find most recently modified folder within project_name
-        val_dir_search = subprocess.run(f'find {project_name} -type d -name "val*" -printf "%T@ %p\\n" | sort -n | tail -1', 
+        # find most recently modified val folder within project_name
+        val_dir_search = subprocess.run(f'find {project_name} -maxdepth 1 -mindepth 1 -type d -name "val*" -printf "%T@ %p\\n" | sort -n | tail -1', 
                                 shell=True, capture_output=True, text=True)
         val_dir = val_dir_search.stdout.split(' ')[-1].strip()
+        assert val_dir != '', f"No val directory found in {project_name}"
         print(f'Getting saved validation results from: {val_dir}')
 
         # red metrics from yaml file
@@ -43,7 +63,33 @@ def train_with_wandb(config=None):
             clean_key = key.replace('metrics/', '').replace('(B)', '')
             metrics_to_log[clean_key] = value
         
+        # Reinitialize WandB since Ultralytics internally initialized and finished a run
+        wandb.init(reinit=True, config=config)
         wandb.log(metrics_to_log)
+
+    del finetuner.model
+    del finetuner
+    del YOLOfinetuner
+    for i in range(5): gc.collect()
+    torch.cuda.empty_cache()
+    torch.cuda.ipc_collect()
+    torch.cuda.synchronize()
+    # Kill all pt_data_loader processes
+    try:
+        # Kill data worker processes
+        subprocess.run('pkill -f pt_data_worker', shell=True, timeout=10)
+        subprocess.run('pgrep -u vagarwal -x pt_data_worker | xargs -r kill -9', shell=True, timeout=10)
+        
+        # Kill any remaining Python processes that might be data loaders
+        subprocess.run('pgrep -u vagarwal -f "python.*evaluate_YOLO" | xargs -r kill -9', shell=True, timeout=10)
+        
+        # Clean up any orphaned torch processes
+        subprocess.run('pgrep -u vagarwal -f "torch" | xargs -r kill -9', shell=True, timeout=10)
+        
+    except subprocess.TimeoutExpired:
+        print("Warning: Process cleanup timed out")
+    except Exception as e:
+        print(f"Warning: Process cleanup failed: {e}")
 
 def run_hyperparameter_optimization(project_name, data, model, sweep_count=50, epochs=20, sweep_name='yolo_hyperparam_opt'):
     global sweep_id
@@ -51,7 +97,6 @@ def run_hyperparameter_optimization(project_name, data, model, sweep_count=50, e
     
     # Create sweep configuration
     sweep_config = {
-        'name': sweep_name,
         'method': 'random',  # Can be 'grid', 'random', or 'bayes'
         'metric': {'name': 'mAP50', 'goal': 'maximize'},
         'parameters': {
@@ -87,6 +132,9 @@ def run_hyperparameter_optimization(project_name, data, model, sweep_count=50, e
     }
     
     # Add fixed parameters that don't change across runs
+    if sweep_name is not None:
+        sweep_config['name'] = sweep_name
+        
     sweep_config['parameters']['data'] = {'value': data}
     sweep_config['parameters']['model'] = {'value': model}
     sweep_config['parameters']['epochs'] = {'value': epochs}  # Fixed number of epochs for all runs
@@ -110,7 +158,7 @@ if __name__ == "__main__":
     parser.add_argument('--sweep_count', type=int, default=50, help='Number of hyperparameter combinations to try.')
     parser.add_argument('--epochs', type=int, default=20, help='Number of epochs for training in each hyperparameter run.')
     parser.add_argument('--workers', type=int, default=8, help='Number of workers for data loading.')
-    parser.add_argument('--sweep_name', type=str, default='yolo_hyperparam_opt', help='Name of the WandB sweep.')
+    parser.add_argument('--sweep_name', type=str, default=None, help='Name of the WandB sweep.')
     args = parser.parse_args()
     
     # Validate required arguments
