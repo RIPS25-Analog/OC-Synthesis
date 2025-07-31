@@ -232,8 +232,8 @@ def main():
     # UPDATE THESE PATHS FOR YOUR SYSTEM
     # ========================================
     
-    SOURCE_DIR = "/home/coraguo/RIPS25-AnalogDevices-ObjectDetection/src/3d_C_P/mmdetection3d/data/sunrgbd/sunrgbd_trainval/insertion_ilog2_istren2_context_surfrandom_cov15-50_VISIBILITY"  # UPDATE THIS!
-    OUTPUT_DIR = "/home/coraguo/RIPS25-AnalogDevices-ObjectDetection/src/YOLO11/organized_yolo_datasett"  # UPDATE THIS!
+    SOURCE_DIR = "/home/coraguo/RIPS25-AnalogDevices-ObjectDetection/src/3d_C_P/mmdetection3d/data/sunrgbd/sunrgbd_trainval/insertion_ilog2_istren2_context_surfrandom_cov15-50_VISIBILITY"
+    OUTPUT_DIR = "/home/coraguo/RIPS25-AnalogDevices-ObjectDetection/src/YOLO11/organized_yolo_datasett"
     
     print("🛠️  YOLO DATASET REGENERATION - PROPER FIX")
     print("=" * 60)

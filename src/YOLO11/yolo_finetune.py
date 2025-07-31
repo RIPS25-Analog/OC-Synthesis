@@ -9,7 +9,7 @@ class YOLOfinetuner:
 
         self.data = kwargs.get('data')
         if not kwargs.get('project', None):
-            kwargs['project'] = '/home/wandb-runs/' + self.data.split('/')[-1].split('.')[0]
+            kwargs['project'] = '/home/wandb_runs/' + self.data.split('/')[-1].split('.')[0]
 
         del kwargs['model']
         del kwargs['eval_imgsz']
@@ -24,7 +24,7 @@ if __name__ == "__main__":
                                       formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--model', type=str, default='yolo11n.pt', help='Path to the YOLO model file.')
     parser.add_argument('--data', type=str, required=True, help='Path to the dataset configuration file.')
-    parser.add_argument('--epochs', type=int, default=100, help='Number of training epochs.')
+    parser.add_argument('--epochs', type=int, default=10, help='Number of training epochs.')
     parser.add_argument('--project', type=str, default=None, help='Project name for saving results.')
     
     # Additional hyperparameters
