@@ -1,40 +1,40 @@
 import argparse
 import wandb
 import os
-import subprocess
-import yaml
+from finetune_YOLO import YOLOfinetuner
+from evaluate_YOLO import YOLOevaluator
 
 def train_with_wandb(config=None):
     """Training function to be called by WandB sweep agent."""
 
-    with wandb.init(config=config):
+    with wandb.init(config=config) as run:
         config = wandb.config
-        
-        multi_scale_str = '--multi_scale' if config.multi_scale else ''
+    
         project_name = f"/home/wandb-runs/{config.data.split('/')[-1].split('.')[0]}/{sweep_id}"
+        run_name = run.name
+        finetune_args = {'data': config.data,
+                        'model': config.model,
+                        'epochs': config.epochs,
+                        'batch': config.batch,
+                        'imgsz': config.imgsz,
+                        'freeze': config.freeze,
+                        'project': project_name,
+                        'name': run_name,
+                        'val': False
+                        }
         
-        subprocess.run(f'python src/finetune_YOLO.py --data {config.data} --model {config.model} --epochs {config.epochs}\
-                        --batch {config.batch} --imgsz {config.imgsz} --freeze {config.freeze}\
-                        --project {project_name} {multi_scale_str} --dont_val --no_wandb', shell=True, check=True)
+        finetuner = YOLOfinetuner(**finetune_args)
+        results_train = finetuner.train_model()
         
-        train_dir_search = subprocess.run(f'find {project_name} -type d -name "train*" -printf "%T@ %p\\n" | sort -n | tail -1', 
-                                shell=True, capture_output=True, text=True)
-        train_dir = train_dir_search.stdout.split(' ')[-1].strip()
-        print(f'Found train directory: {train_dir}')
-
-        subprocess.run(f'python src/evaluate_YOLO.py --run {train_dir} --batch {config.batch}\
-                        --imgsz {config.eval_imgsz} --project {project_name}', shell=True, check=True)
-
-        # find most recently modified folder within project_name
-        val_dir_search = subprocess.run(f'find {project_name} -type d -name "val*" -printf "%T@ %p\\n" | sort -n | tail -1', 
-                                shell=True, capture_output=True, text=True)
-        val_dir = val_dir_search.stdout.split(' ')[-1].strip()
-        print(f'Getting saved validation results from: {val_dir}')
-
-        # red metrics from yaml file
-        val_results_file = os.path.join(val_dir, 'simple_evaluation_results.yaml')
-        with open(val_results_file, 'r') as file:
-            val_results = yaml.safe_load(file)
+        evaluator_args = {
+            'run': str(results_train.save_dir),
+            'batch': config.batch,
+            'imgsz': config.eval_imgsz,
+            'project': project_name,
+            'split': 'val'  # Assuming we want to evaluate on the validation set
+        }
+        evaluator = YOLOevaluator(**evaluator_args)
+        val_results = evaluator.evaluate_model()
 
         metrics_to_log = {}
         
@@ -43,6 +43,8 @@ def train_with_wandb(config=None):
             clean_key = key.replace('metrics/', '').replace('(B)', '')
             metrics_to_log[clean_key] = value
         
+        # Reinitialize WandB since Ultralytics internally initialized and finished a run
+        wandb.init(reinit=True, config=config)
         wandb.log(metrics_to_log)
 
 def run_hyperparameter_optimization(project_name, data, model, sweep_count=50, epochs=20, sweep_name='yolo_hyperparam_opt'):
@@ -51,7 +53,6 @@ def run_hyperparameter_optimization(project_name, data, model, sweep_count=50, e
     
     # Create sweep configuration
     sweep_config = {
-        'name': sweep_name,
         'method': 'random',  # Can be 'grid', 'random', or 'bayes'
         'metric': {'name': 'mAP50', 'goal': 'maximize'},
         'parameters': {
@@ -77,16 +78,19 @@ def run_hyperparameter_optimization(project_name, data, model, sweep_count=50, e
             
             # Training parameters
             'batch': {'values': [32]},
-            'imgsz': {'values': [640, 800, 960, 1120]},
-            'eval_imgsz': {'values': [800, 960, 1280, 1600]},
-            'multi_scale': {'values': [0,1]}, # making numeric for ease of plotting in WandB
+            'imgsz': {'values': [480, 640, 800, 960]},
+            'eval_imgsz': {'values': [480, 640, 800, 960]},
+            # 'multi_scale': {'values': [0,1]}, # making numeric for ease of plotting in WandB
             
             # Architecture parameters
-            'freeze': {'values': [8, 12, 16]}#{'distribution': 'int_uniform', 'min': 10, 'max': 20},
+            'freeze': {'values': [10, 15, 20]}#{'distribution': 'int_uniform', 'min': 10, 'max': 20},
         }
     }
     
     # Add fixed parameters that don't change across runs
+    if sweep_name is not None:
+        sweep_config['name'] = sweep_name
+        
     sweep_config['parameters']['data'] = {'value': data}
     sweep_config['parameters']['model'] = {'value': model}
     sweep_config['parameters']['epochs'] = {'value': epochs}  # Fixed number of epochs for all runs
@@ -105,19 +109,19 @@ def run_hyperparameter_optimization(project_name, data, model, sweep_count=50, e
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run hyperparameter optimization for YOLO model.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--data', type=str, required=True, help='Path to the dataset configuration file.')
-    parser.add_argument('--project_name', type=str, default='runs-{dataset_name}', help='WandB project name for hyperparameter optimization.')
+    parser.add_argument('--project_name', type=str, default='{dataset_name}', help='WandB project name for hyperparameter optimization.')
     parser.add_argument('--model', type=str, default='yolo11n.pt', help='Path to the YOLO model file.')
     parser.add_argument('--sweep_count', type=int, default=50, help='Number of hyperparameter combinations to try.')
     parser.add_argument('--epochs', type=int, default=20, help='Number of epochs for training in each hyperparameter run.')
-    parser.add_argument('--workers', type=int, default=8, help='Number of workers for data loading.')
-    parser.add_argument('--sweep_name', type=str, default='yolo_hyperparam_opt', help='Name of the WandB sweep.')
+    parser.add_argument('--workers', type=int, default=16, help='Number of workers for data loading.')
+    parser.add_argument('--sweep_name', type=str, default=None, help='Name of the WandB sweep.')
     args = parser.parse_args()
     
     # Validate required arguments
     assert os.path.exists(args.data), f"Data configuration file not found: {args.data}"
 
-    if args.project_name == 'runs-{dataset_name}':
-        args.project_name = f'runs-{args.data.split("/")[-1].split(".")[0]}'
+    if args.project_name == '{dataset_name}':
+        args.project_name = f'{args.data.split("/")[-1].split(".")[0]}'
 
     # Use default hyperparameter optimization
     run_hyperparameter_optimization(

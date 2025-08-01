@@ -8,24 +8,32 @@ class YOLOfinetuner:
         print(self.model.info())
 
         self.data = kwargs.get('data')
-        if not kwargs.get('project', None):
-            kwargs['project'] = '/home/wandb-runs/' + self.data.split('/')[-1].split('.')[0]
 
-        del kwargs['model']
-        del kwargs['eval_imgsz']
+        if 'model' in kwargs:
+            del kwargs['model']
+            
         self.train_params = kwargs
         
     def train_model(self):
         results = self.model.train(**self.train_params)
-        return results
+        return results     
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train a YOLO model with specified parameters.',
                                       formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--model', type=str, default='yolo11n.pt', help='Path to the YOLO model file.')
     parser.add_argument('--data', type=str, required=True, help='Path to the dataset configuration file.')
-    parser.add_argument('--epochs', type=int, default=100, help='Number of training epochs.')
     parser.add_argument('--project', type=str, default=None, help='Project name for saving results.')
+    parser.add_argument('--name', type=str, default=None, help='Name of the training run.')   
+    parser.add_argument('--workers', type=int, default=16, help='Number of workers for data loading.')
+    parser.add_argument('--no_wandb', action='store_true', help='Disable Weights & Biases logging.')
+    parser.add_argument('--val', type=bool, default=True, help='Enable validation during training.')
+    
+    parser.add_argument('--epochs', type=int, default=100, help='Number of training epochs.')
+    parser.add_argument('--batch', type=int, default=32, help='Batch size.')
+    parser.add_argument('--imgsz', type=int, default=640, help='Image size.')
+    parser.add_argument('--multi_scale', action='store_true', help='Enable multi-scale training.')
+    parser.add_argument('--close_mosaic', type=int, default=10, help='Close mosaic augmentation N epochs before training ends.')
     
     # Additional hyperparameters
     parser.add_argument('--freeze', type=int, default=23, help='Number of layers to freeze during training.')
@@ -41,16 +49,7 @@ if __name__ == "__main__":
     parser.add_argument('--dfl', type=float, default=1.5, help='Distribution focal loss gain.')
     parser.add_argument('--nbs', type=int, default=64, help='Nominal batch size.')
     parser.add_argument('--dropout', type=float, default=0.0, help='Use dropout regularization.')
-    parser.add_argument('--batch', type=int, default=16, help='Batch size.')
-    parser.add_argument('--imgsz', type=int, default=640, help='Image size.')
-    parser.add_argument('--multi_scale', action='store_true', help='Enable multi-scale training.')
-    parser.add_argument('--workers', type=int, default=8, help='Number of workers for data loading.')
-    parser.add_argument('--no_wandb', action='store_true', help='Disable Weights & Biases logging.')
-    parser.add_argument('--dont_val', action='store_true', help='Dummy argument for testing purposes.')
-    parser.add_argument('--close_mosaic', type=int, default=10, help='Close mosaic augmentation N epochs before training ends.')
-    parser.add_argument('--eval_imgsz', type=int, default=640, help='Image size for evaluation.')
-    parser.add_argument('--name', type=str, default=None, help='Name of the training run.')
-
+    
     args = parser.parse_args()
 
     if args.no_wandb:
@@ -59,10 +58,9 @@ if __name__ == "__main__":
     else:
         settings.update({"wandb": True})
     del args.no_wandb  # Remove no_wandb from args to avoid passing it to YOLO
-    
 
-    args.val = not args.dont_val  # Convert dont_val to val
-    del args.dont_val  # Remove dont_val from args
+    if args.project is None:
+        args.project = '/home/wandb-runs/' + args.data.split('/')[-1].split('.')[0]
 
     # Convert args into dictionary
     train_kwargs = vars(args)
