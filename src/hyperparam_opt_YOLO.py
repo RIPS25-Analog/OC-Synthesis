@@ -29,7 +29,7 @@ def train_with_wandb(config=None):
         evaluator_args = {
             'run': str(results_train.save_dir),
             'batch': config.batch,
-            'imgsz': config.imgsz,
+            'imgsz': config.eval_imgsz,
             'project': project_name,
             'split': 'val'  # Assuming we want to evaluate on the validation set
         }
@@ -80,7 +80,7 @@ def run_hyperparameter_optimization(project_name, data, model, sweep_count=50, e
             'batch': {'values': [32]},
             'imgsz': {'values': [480, 640, 800, 960]},
             'eval_imgsz': {'values': [480, 640, 800, 960]},
-            'multi_scale': {'values': [0,1]}, # making numeric for ease of plotting in WandB
+            # 'multi_scale': {'values': [0,1]}, # making numeric for ease of plotting in WandB
             
             # Architecture parameters
             'freeze': {'values': [10, 15, 20]}#{'distribution': 'int_uniform', 'min': 10, 'max': 20},
@@ -109,19 +109,19 @@ def run_hyperparameter_optimization(project_name, data, model, sweep_count=50, e
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run hyperparameter optimization for YOLO model.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--data', type=str, required=True, help='Path to the dataset configuration file.')
-    parser.add_argument('--project_name', type=str, default='runs-{dataset_name}', help='WandB project name for hyperparameter optimization.')
+    parser.add_argument('--project_name', type=str, default='{dataset_name}', help='WandB project name for hyperparameter optimization.')
     parser.add_argument('--model', type=str, default='yolo11n.pt', help='Path to the YOLO model file.')
     parser.add_argument('--sweep_count', type=int, default=50, help='Number of hyperparameter combinations to try.')
     parser.add_argument('--epochs', type=int, default=20, help='Number of epochs for training in each hyperparameter run.')
-    parser.add_argument('--workers', type=int, default=8, help='Number of workers for data loading.')
+    parser.add_argument('--workers', type=int, default=16, help='Number of workers for data loading.')
     parser.add_argument('--sweep_name', type=str, default=None, help='Name of the WandB sweep.')
     args = parser.parse_args()
     
     # Validate required arguments
     assert os.path.exists(args.data), f"Data configuration file not found: {args.data}"
 
-    if args.project_name == 'runs-{dataset_name}':
-        args.project_name = f'runs-{args.data.split("/")[-1].split(".")[0]}'
+    if args.project_name == '{dataset_name}':
+        args.project_name = f'{args.data.split("/")[-1].split(".")[0]}'
 
     # Use default hyperparameter optimization
     run_hyperparameter_optimization(
