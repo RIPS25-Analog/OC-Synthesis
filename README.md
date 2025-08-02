@@ -11,11 +11,17 @@ wandb login  # put API key
 
 ## Running scripts
 
-To finetune YOLO on a specific data file: ``` python src/finetune_YOLO.py --data data/openimages-basic-v0.yaml --epochs 300 --freeze 23 ```
+To finetune YOLO on a specific data file: 
 
-To evaluate a particular YOLO finetuning run: ``` python src/evaluate_YOLO.py --run runs/openimages-basic-v0/train2 ```
+``` python src/finetune_YOLO.py --data data/openimages-basic-v0.yaml --epochs 300 --freeze 23 ```
 
-To run hyperopt for YOLO finetune on a specific data file: ``` python src/hyperparam_opt_YOLO.py --daata data/openimages-basic-v0.yaml --epoch 100 ```
+To evaluate a particular YOLO finetuning run: 
+
+``` python src/evaluate_YOLO.py --run runs/openimages-basic-v0/train2 ```
+
+To run hyperopt for YOLO finetune on a specific data file: 
+
+``` python src/hyperparam_opt_YOLO.py --data data/openimages-basic-v0.yaml --epoch 100 ```
 
 To generate Cut n Paste dataset: 
 - ``` python src/Cut-and-Paste/dataset_generator.py --scale --rotation --num 20 --dont_occlude_much /home/data/raw/kaggle_v0/ /home/data/processed/kaggle-cnp-v0/[desired-dataset-name] ```

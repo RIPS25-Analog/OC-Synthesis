@@ -11,6 +11,8 @@ class YOLOfinetuner:
 
         if 'model' in kwargs:
             del kwargs['model']
+        if 'eval_imgsz' in kwargs:
+            del kwargs['eval_imgsz']
             
         self.train_params = kwargs
         
@@ -49,6 +51,7 @@ if __name__ == "__main__":
     parser.add_argument('--dfl', type=float, default=1.5, help='Distribution focal loss gain.')
     parser.add_argument('--nbs', type=int, default=64, help='Nominal batch size.')
     parser.add_argument('--dropout', type=float, default=0.0, help='Use dropout regularization.')
+    parser.add_argument('--fraction', type=float, default=1.0, help='Fraction of the dataset to use for training.')
     
     args = parser.parse_args()
 
