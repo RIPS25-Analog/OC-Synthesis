@@ -20,7 +20,6 @@ from defaults import *
 from pyblur_master.pyblur import LinearMotionBlur
 from datetime import datetime
 
-FIRST_TIME = True
 seed = 0
 np.random.seed(seed)
 random.seed(seed)
@@ -54,7 +53,7 @@ def LinearMotionBlur3C(img):
 	for i in range(3):
 		blurred_img[:,:,i] = PIL2array1C(LinearMotionBlur(img[:,:,i], lineLength, lineAngle, lineType))
 	
-	blurred_img = Image.fromarray(blurred_img, 'RGB')
+	blurred_img = Image.fromarray(blurred_img)#, 'RGB')
 	return blurred_img
 
 def get_mask_overlap(mask1, mask2):
@@ -231,7 +230,7 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
 				dilated_foreground = dilated_foreground.rotate(rot_degrees, expand=True)
 				mask = mask.rotate(rot_degrees, expand=True)
 
-				dilated_mask = Image.fromarray(cv2.dilate(PIL2array1C(mask), np.ones((20,20), np.uint8), iterations=1), 'L')
+				dilated_mask = Image.fromarray(cv2.dilate(PIL2array1C(mask), np.ones((20,20), np.uint8), iterations=1))#, 'L')
 				if INVERTED_MASK:
 					dilated_mask = Image.fromarray(PIL2array1C(dilated_mask)).convert('1')
 				
@@ -376,17 +375,7 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
 				
 				mixed = cv2.seamlessClone(source.copy(), target.copy(), dilated_mask_arr, center, cv2.NORMAL_CLONE)
 
-				global FIRST_TIME
-				if not PARALLELIZE and FIRST_TIME:
-					FIRST_TIME = False
-					logging.info(f"SAVING MASKS FOR {anno_file} with {objects[idx][0].split('/')[-1].split('.')[0]} path")
-					mask.save(f"tmp/original_mask_{objects[idx][0].split('/')[-1].split('.')[0]}.png")
-					dilated_mask.save(f"tmp/dilated_mask_{objects[idx][0].split('/')[-1].split('.')[0]}.png")
-					foreground.save(f"tmp/foreground_{objects[idx][0].split('/')[-1].split('.')[0]}.png")
-					dilated_foreground.save(f"tmp/dilated_foreground_{objects[idx][0].split('/')[-1].split('.')[0]}.png")
-					# assert 0==1
-
-				synth_images[i] = Image.fromarray(mixed.astype(np.uint8), 'RGB')
+				synth_images[i] = Image.fromarray(mixed.astype(np.uint8))#, 'RGB')
 
 			elif blending_list[i] == 'gaussian':
 				synth_images[i].paste(foreground, (x, y), Image.fromarray(cv2.GaussianBlur(PIL2array1C(mask),(5,5),2)))
@@ -529,10 +518,10 @@ if __name__ == '__main__':
 	  help="The directory where images and annotation lists will be created.")
 	parser.add_argument("--selected",
 	  help="Keep only selected instances in the test dataset. Default is to keep all instances in the root directory", action="store_true")
-	parser.add_argument("--scale",
-	  help="Add scale augmentation.Default is to add scale augmentation.", action="store_true")
-	parser.add_argument("--rotation",
-	  help="Add rotation augmentation.Default is to add rotation data augmentation.", action="store_true")
+	parser.add_argument("--no_scale",
+	  help="Remove scale augmentation.Default is to add scale augmentation.", action="store_true")
+	parser.add_argument("--no_rotation",
+	  help="Remove rotation augmentation.Default is to add rotation data augmentation.", action="store_true")
 	parser.add_argument("--num",
 	  help="Number of times each image will be in dataset", default=1, type=int)
 	parser.add_argument("--dont_occlude_much",
@@ -547,6 +536,11 @@ if __name__ == '__main__':
 
 	PARALLELIZE = not args.dont_parallelize
 	MAX_OBJ_IMAGES = args.max_obj_images
+
+	args.scale = not args.no_scale
+	args.rotation = not args.no_rotation
+	del args.no_scale
+	del args.no_rotation
 
 	if not os.path.exists(args.exp):
 		os.makedirs(args.exp)
