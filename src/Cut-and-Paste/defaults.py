@@ -11,8 +11,10 @@ NUMBER_OF_WORKERS = 24
 BLENDING_LIST = ['gaussian','poisson', 'none', 'box', 'motion']
 
 # Parameters for images
-MIN_NO_OF_OBJECTS = 1
-MAX_NO_OF_OBJECTS = 6
+MIN_N_OBJECTS = 3
+MAX_N_OBJECTS = 6
+MIN_N_TARGET_OBJECTS = 0
+MAX_N_TARGET_OBJECTS = 2
 WIDTH = 640*2
 HEIGHT = 480*2
 MAX_ATTEMPTS_TO_SYNTHESIZE = 5
@@ -20,7 +22,7 @@ MAX_OBJECTWISE_ATTEMPTS_TO_SYNTHESIZE = 10
 
 # Parameters for objects in images
 MIN_SCALE = 0.5 # min scale for scale augmentation
-MAX_SCALE = 2.0 # max scale for scale augmentation
+MAX_SCALE = 1.5 # max scale for scale augmentation
 MIN_SCALED_DIM = 15 # minimum scaled width/height of object (in pixels) after scale augmentation
 MAX_DEGREES = 180 # max rotation allowed during rotation augmentation
 MAX_TRUNCATION_FRACTION = 0.25 # max fraction to be truncated = MAX_TRUNCACTION_FRACTION*(WIDTH/HEIGHT)
