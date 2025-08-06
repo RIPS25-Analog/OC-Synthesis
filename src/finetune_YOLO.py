@@ -13,6 +13,10 @@ class YOLOfinetuner:
             del kwargs['model']
         if 'eval_imgsz' in kwargs:
             del kwargs['eval_imgsz']
+        if 'optimizer' not in kwargs:
+            kwargs['optimizer'] = 'Adam'  # Use Adam optimizer by default
+        if 'multi_scale' in kwargs:
+            kwargs['multi_scale'] = bool(kwargs['multi_scale'])
             
         self.train_params = kwargs
         
