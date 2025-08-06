@@ -24,10 +24,8 @@ To run hyperopt for YOLO finetune on a specific data file:
 ``` python src/hyperparam_opt_YOLO.py --data data/openimages-basic-v0.yaml --epoch 100 ```
 
 To generate Cut n Paste dataset: 
-- ``` python src/Cut-and-Paste/dataset_generator.py --num 20 --dont_occlude_much /home/data/raw/kaggle_v0/ /home/data/processed/kaggle-cnp-v0/[desired-dataset-name] ```
-- filter_bboxes_by_classes in file-controller.ipynb
-- split_cnp_into_train_val_test in file-controller.ipynb
-- check the yaml in /home/data/
+
+``` python src/Cut-and-Paste/dataset_generator.py --num 20 --dont_occlude_much /home/data/raw/kaggle_v0/ /home/data/processed/kaggle-cnp-v0/[desired-dataset-name] ```
 
 ## Folder structure
 

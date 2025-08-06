@@ -20,6 +20,8 @@ from defaults import *
 from pyblur_master.pyblur import LinearMotionBlur
 from datetime import datetime
 
+import post_processing
+
 seed = 0
 np.random.seed(seed)
 random.seed(seed)
@@ -121,7 +123,7 @@ def get_annotation_from_mask(mask, scale=1.0):
 	xmin, xmax = np.where(cols)[0][[0, -1]]
 	return int(scale*xmin), int(scale*xmax), int(scale*ymin), int(scale*ymax)
 
-def write_yaml_file(exp_dir, labels, label_map):
+def write_yaml_file(exp_dir, label_map):
 	'''Writes the .yaml for YOLO training.
 
 	Args:
@@ -129,17 +131,15 @@ def write_yaml_file(exp_dir, labels, label_map):
 						 files will be stored
 		labels(list): List of labels. This will be useful while training an object detector
 	'''
-	unique_labels = sorted(set(labels))
 	yaml_filename = f"{'_'.join(exp_dir.split('/')[-2:])}.yaml" # join raw_data and processed_data name
-	yaml_path = os.path.join('/home/data', yaml_filename)
+	yaml_path = os.path.join('/home/data/configs', yaml_filename)
 	
 	data = {
-		'path': str(exp_dir),
 		'train': os.path.join(exp_dir, 'train'),
 		'val': os.path.join(exp_dir, 'val'),
 		'test': os.path.join(exp_dir, 'test'),
-		'nc': len(unique_labels),
-		'names': label_map,
+		'nc': len(SELECTED_CLASSES),
+		'names': {label_id: class_name for label_id, class_name in label_map.items() if class_name in SELECTED_CLASSES},
 	}
 
 	with open(yaml_path, 'w') as f:
@@ -207,7 +207,7 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
 		objs_n_masks = [] # reset the list of objects and masks to try again
 		# try to place each object that's been assigned to this image (or skip if unplaceable)
 		for idx, obj in enumerate(all_objects):
-			logging.info(f'\tStarting object {obj[0]}...')
+			logging.info(f'\t\tStarting object {obj[0]}...')
 			foreground = Image.open(obj[0]).convert('RGB')
 			foreground = ImageOps.exif_transpose(foreground)  # fix orientation if needed
 			mask_file =  os.path.join(os.path.dirname(obj[0]), os.path.basename(obj[0]).split('.')[0] + '_mask.png').replace('/images', '/masks')
@@ -215,8 +215,6 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
 			mask = Image.open(mask_file)
 			if INVERTED_MASK:
 				mask = Image.fromarray(255-PIL2array1C(mask)).convert('1')
-
-			dilated_foreground = foreground.copy()
 
 			assert mask.size == foreground.size, f"Mask size {mask.size} does not match foreground size {foreground.size} for object {obj[0]}"
 			
@@ -227,7 +225,6 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
 				rot_degrees = random.randint(-MAX_DEGREES, MAX_DEGREES)
 
 				foreground = foreground.rotate(rot_degrees, expand=True)
-				dilated_foreground = dilated_foreground.rotate(rot_degrees, expand=True)
 				mask = mask.rotate(rot_degrees, expand=True)
 
 				dilated_mask = Image.fromarray(cv2.dilate(PIL2array1C(mask), np.ones((20,20), np.uint8), iterations=1))#, 'L')
@@ -247,7 +244,6 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
 				# logging.info(f'\t\t Mask size before crop: {mask.size} | Dilated mask size before crop: {dilated_mask.size}')
 			
 				foreground = foreground.crop((xmin, ymin, xmax, ymax))
-				dilated_foreground = dilated_foreground.crop((xmin_d, ymin_d, xmax_d, ymax_d))
 				mask = mask.crop((xmin, ymin, xmax, ymax))
 				dilated_mask = dilated_mask.crop((xmin_d, ymin_d, xmax_d, ymax_d))
 
@@ -255,10 +251,10 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
 				# logging.info(f'\t\t Mask size after crop: {mask.size} | Dilated mask size after crop: {dilated_mask.size}')
 
 				o_w, o_h = foreground.size
-				logging.info(f'\t\tObject rotated by {rot_degrees} degrees, new size: {o_w}x{o_h}')
+				logging.info(f'\t\t\tObject rotated by {rot_degrees} degrees, new size: {o_w}x{o_h}')
 
 			if o_w < 20 or o_h < 20:
-				logging.warning(f'\t\tObject (after crop n rotate) is quite small!! ({o_w}x{o_h})...')
+				logging.warning(f'\t\t\tObject (after crop n rotate) is quite small!! ({o_w}x{o_h})...')
 
 			if scale_augment:
 				ACTUAL_MIN_SCALE = MIN_SCALED_DIM / min(o_w, o_h) # every object should be at least MIN_SCALED_DIM pixels in width/height
@@ -269,14 +265,13 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
 				assert w-o_w > 0 and h-o_h > 0 and o_w > 0 and o_h > 0, "Invalid object dimensions after scaling"
 
 				foreground = foreground.resize((o_w, o_h), Image.LANCZOS)
-				dilated_foreground = dilated_foreground.resize((o_w, o_h), Image.LANCZOS)
 				mask = mask.resize((o_w, o_h), Image.LANCZOS)
 				dilated_mask = dilated_mask.resize((o_w, o_h), Image.LANCZOS)
 				
 			# Compare current mask with all previous masks to avoid excess occlusion
 			xmin, xmax, ymin, ymax = get_annotation_from_mask(mask)
 			for placement_attempt in range(MAX_OBJECTWISE_ATTEMPTS_TO_SYNTHESIZE):
-				logging.info('\t\tStarting an object placement attempt...')
+				logging.info(f'\t\t\tStarting {placement_attempt}-th object placement attempt...')
 				x = random.randint(int(-MAX_TRUNCATION_FRACTION*o_w), int(w-o_w+MAX_TRUNCATION_FRACTION*o_w))
 				y = random.randint(int(-MAX_TRUNCATION_FRACTION*o_h), int(h-o_h+MAX_TRUNCATION_FRACTION*o_h))
 
@@ -310,7 +305,7 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
 				for prev_obj in already_syn_objs:
 					overlap = get_mask_overlap(mask_array, prev_obj)
 					if overlap > MAX_OCCLUSION_IOU:
-						logging.info('\t\t\tOcclusion found, trying again...')
+						logging.info('\t\t\t\tOcclusion found, trying again...')
 						obj_placement_is_valid = False
 						break
 
@@ -324,7 +319,7 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
 				all_objects_success = False
 				break
 			
-			objs_n_masks.append((obj[1], (x, y, xmin, ymin, xmax, ymax), foreground, dilated_foreground, mask, dilated_mask))
+			objs_n_masks.append((obj[1], (x, y, xmin, ymin, xmax, ymax), foreground, mask, dilated_mask))
 
 		# If we could place all objects, then we're done trying object placements
 		if all_objects_success:
@@ -340,8 +335,9 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
 
 	logging.info('Blending objects now...')
 	# Start pasting and blending objects
+	labels = []
 	for idx, obj_n_mask in enumerate(objs_n_masks):
-		obj_class, (x, y, xmin, ymin, xmax, ymax), foreground, dilated_foreground, mask, dilated_mask = obj_n_mask
+		obj_class, (x, y, xmin, ymin, xmax, ymax), foreground, mask, dilated_mask = obj_n_mask
 		# Paste image on different background copies according to the different blending modes
 		for i in range(len(blending_list)):
 			if blending_list[i] == 'none' or blending_list[i] == 'motion':
@@ -351,13 +347,7 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
 				offset = (x, y)
 				target = PIL2array3C(synth_images[i])
 
-				# source = PIL2array3C(foreground)
-				# source, mask_arr, offset = trim_img_n_mask(target, source, PIL2array1C(mask), offset)
-				# mask_arr = (mask_arr*255).astype(np.uint8)
-				# center = (offset[0] + source.shape[1]//2, offset[1] + source.shape[0]//2)
-				# mixed = cv2.seamlessClone(source.copy(), target.copy(), mask_arr, center, cv2.NORMAL_CLONE)
-
-				source = PIL2array3C(dilated_foreground)
+				source = PIL2array3C(foreground)
 				source, dilated_mask_arr, offset = trim_img_n_mask(target, source, PIL2array1C(dilated_mask), offset)
 				dilated_mask_arr = (dilated_mask_arr*255).astype(np.uint8)
 				
@@ -366,7 +356,6 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
 				
 				center = (offset[0] + source.shape[1]//2, offset[1] + source.shape[0]//2)
 
-				
 				assert source.shape[0] > 0 and source.shape[1] > 0, f"Source image is empty for object {obj_class} at index {idx}"
 				assert target.shape[0] > 0 and target.shape[1] > 0, f"Target image is empty for object {obj_class} at index {idx}"
 				assert dilated_mask_arr.shape[0] > 0 and dilated_mask_arr.shape[1] > 0, f"Dilated mask is empty for object {obj_class} at index {idx}"
@@ -390,8 +379,13 @@ def create_image_anno(objects, distractor_objects, img_file, anno_file, bg_file,
 		ymin = max(1, y+ymin)
 		ymax = min(h, y+ymax)
 		string = f"{class_num} {(xmin+xmax)/(2*w)} {(ymin+ymax)/(2*h)} {(xmax-xmin)/w} {(ymax-ymin)/h}\n"
-		with open(anno_file, "a") as f:
-			f.write(string)
+		labels.append(string)
+
+	# write annotations to file
+	logging.info(f'Writing annotations to {anno_file}')
+	start_time = time.time()
+	with open(anno_file, 'w') as f:
+		f.writelines(labels)
 
 	logging.info(f'Creating image with all objects took {time.time() - start_time} seconds')
 	logging.info('Saving images now...')
@@ -494,7 +488,7 @@ def generate_synthetic_dataset(args):
 	all_classes = SELECTED_CLASSES + list(unselected_classes)
 	label_map = {i: label for i, label in enumerate(all_classes)}
 
-	write_yaml_file(args.exp, class_names, label_map)
+	write_yaml_file(args.exp, label_map)
 
 	if not os.path.exists(args.exp):
 		os.makedirs(args.exp)
@@ -508,7 +502,8 @@ def generate_synthetic_dataset(args):
 		os.makedirs(img_dir)
 	
 	syn_img_files, anno_files = gen_syn_data(img_files, class_names, img_dir, anno_dir, label_map, args.scale, args.rotation, args.dont_occlude_much, args.add_distractors)
-	
+	return label_map
+
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description="Create dataset with different augmentations",
 									  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -552,4 +547,6 @@ if __name__ == '__main__':
 	logging.getLogger('PIL').setLevel(logging.WARNING)
 	logging.info(f'Generating dataset with scale={args.scale}, rotation={args.rotation}, num={args.num}, dont_occlude_much={args.dont_occlude_much}, add_distractors={args.add_distractors}')
 	logging.info(f'Current datetime: {datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S %Z")}')
-	generate_synthetic_dataset(args)
+	label_map = generate_synthetic_dataset(args)
+	reverse_label_map = {v: k for k, v in label_map.items()}
+	post_processing.main(dataset_path=args.exp, classes_to_keep=[reverse_label_map[cls] for cls in SELECTED_CLASSES])
