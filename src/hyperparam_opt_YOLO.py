@@ -1,6 +1,7 @@
 import argparse
 import wandb
 import os
+from ultralytics import settings
 from finetune_YOLO import YOLOfinetuner
 from evaluate_YOLO import YOLOevaluator
 
@@ -11,16 +12,16 @@ def train_with_wandb(config=None):
     with wandb.init(config=config) as run:
         config = wandb.config
 
-        train_project_name = f"{runs_save_dir}/{project_name}/{sweep_id}"
-        print(f"Running hyperparameter optimization in project {train_project_name} with config: {config}")
-        finetuner = YOLOfinetuner(**config, name=run.name, project=train_project_name)
+        local_project_name = f"{runs_save_dir}/{project_name}/{sweep_id}"
+        print(f"Running hyperparameter optimization in project {local_project_name} with config: {config}")
+        finetuner = YOLOfinetuner(**config, name=run.name, project=local_project_name)
         results_train = finetuner.train_model()
         
         evaluator_args = {
             'run': str(results_train.save_dir),
             'batch': config.get('batch', 32),
             'imgsz': config.get('eval_imgsz', 640),
-            'project': config.project,
+            'project': local_project_name,
             'split': 'val'  # Assuming we want to evaluate on the validation set
         }
         evaluator = YOLOevaluator(**evaluator_args)
@@ -119,6 +120,7 @@ if __name__ == "__main__":
         args.project = f'{args.data.split("/")[-1].split(".")[0]}'
     
     project_name = args.project
+    settings.update({"wandb": True}) ## to make sure intra-sweep (epoch-wise) logging is enabled
 
     # Use default hyperparameter optimization
     run_hyperparameter_optimization(
