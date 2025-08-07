@@ -1,10 +1,28 @@
+import yaml
 from ultralytics import YOLO
+from ultralytics import YOLOWorld
 import argparse
 from ultralytics import settings
 
 class YOLOfinetuner:
     def __init__(self, **kwargs):
-        self.model = YOLO(kwargs.get('model', 'yolo11n.pt'), task='detect')
+        model_name = kwargs.get('model', 'yolo11n.pt')
+        if 'world' in model_name:
+            self.model = YOLOWorld(model_name)
+
+            with open(kwargs['data'], 'r') as f:
+                data = yaml.safe_load(f.read())
+            data_names = data.get('names', None)
+            if isinstance(data_names, list):
+                self.class_names = data_names
+            elif isinstance(data_names, dict):
+                self.class_names = list(data_names.values())
+            else:
+                raise ValueError("Invalid 'names' format in data config.")
+            
+            self.model.set_classes(self.class_names)
+        else:
+            self.model = YOLO(model_name, task='detect')
         print(self.model.info())
 
         self.data = kwargs.get('data')
