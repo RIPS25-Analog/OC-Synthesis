@@ -4,22 +4,23 @@ import os
 from finetune_YOLO import YOLOfinetuner
 from evaluate_YOLO import YOLOevaluator
 
+runs_save_dir = '/home/wandb-runs'
 def train_with_wandb(config=None):
     """Training function to be called by WandB sweep agent."""
 
     with wandb.init(config=config) as run:
         config = wandb.config
-    
-        project = f"/home/wandb-runs/{config.data.split('/')[-1].split('.')[0]}/{sweep_id}"
 
-        finetuner = YOLOfinetuner(**config, name=run.name, project=project)
+        train_project_name = f"{runs_save_dir}/{project_name}/{sweep_id}"
+        print(f"Running hyperparameter optimization in project {train_project_name} with config: {config}")
+        finetuner = YOLOfinetuner(**config, name=run.name, project=train_project_name)
         results_train = finetuner.train_model()
         
         evaluator_args = {
             'run': str(results_train.save_dir),
             'batch': config.get('batch', 32),
             'imgsz': config.get('eval_imgsz', 640),
-            'project': project,
+            'project': config.project,
             'split': 'val'  # Assuming we want to evaluate on the validation set
         }
         evaluator = YOLOevaluator(**evaluator_args)
@@ -67,8 +68,8 @@ def run_hyperparameter_optimization(project, data, model, sweep_count=50, epochs
             'batch': {'values': [32]},
             'imgsz': {'values': [480, 640, 800, 960]},
             'eval_imgsz': {'values': [480, 640, 800, 960]},
-            'multi_scale': {'values': [0,1]}, # making numeric for ease of plotting in WandB
-            'epochs': {'values': [5, 10]},
+            'multi_scale': {'values': [0, 1]}, # making numeric for ease of plotting in WandB
+            'epochs': {'values': [5, 10, 20]},
             
             # Architecture parameters
             'freeze': {'values': [17, 20, 23]}#{'distribution': 'int_uniform', 'min': 10, 'max': 20},
@@ -98,6 +99,7 @@ def run_hyperparameter_optimization(project, data, model, sweep_count=50, epochs
     print("Hyperparameter optimization completed!")
 
 if __name__ == "__main__":
+    global project_name
     parser = argparse.ArgumentParser(description='Run hyperparameter optimization for YOLO model.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--model', type=str, default='yolo11n.pt', help='Path to the YOLO model file.')
     parser.add_argument('--data', type=str, required=True, help='Path to the dataset configuration file.')
@@ -115,6 +117,8 @@ if __name__ == "__main__":
 
     if args.project == '{dataset_name}':
         args.project = f'{args.data.split("/")[-1].split(".")[0]}'
+    
+    project_name = args.project
 
     # Use default hyperparameter optimization
     run_hyperparameter_optimization(

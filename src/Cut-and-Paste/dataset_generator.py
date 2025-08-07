@@ -215,6 +215,8 @@ def create_image_anno(objects, img_file, anno_file, bg_file, label_map, w, h, sc
 			mask_arr = PIL2array1C(original_mask)
 			if INVERTED_MASK:
 				mask = Image.fromarray(255-mask_arr).convert('1')
+			else:
+				mask = original_mask.convert('1')
 
 			assert mask.size == foreground.size, f"Mask size {mask.size} does not match foreground size {foreground.size} for object {obj[0]}"
 			
