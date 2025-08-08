@@ -4,7 +4,7 @@ from ultralytics import YOLOWorld
 import argparse
 from ultralytics import settings
 
-class YOLOfinetuner:
+class YOLOFinetuner:
     def __init__(self, **kwargs):
         model_name = kwargs.get('model', 'yolo11n.pt')
         if 'world' in model_name:
@@ -89,6 +89,6 @@ if __name__ == "__main__":
 
     # Convert args into dictionary
     train_kwargs = vars(args)
-    finetuner = YOLOfinetuner(**train_kwargs)
+    finetuner = YOLOFinetuner(**train_kwargs)
     results = finetuner.train_model()
     # print(results)  # Print the training results

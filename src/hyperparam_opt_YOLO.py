@@ -2,8 +2,8 @@ import argparse
 import wandb
 import os
 from ultralytics import settings
-from finetune_YOLO import YOLOfinetuner
-from evaluate_YOLO import YOLOevaluator
+from finetune_YOLO import YOLOFinetuner
+from evaluate_YOLO import YOLOEvaluator
 
 runs_save_dir = '/home/wandb-runs'
 def train_with_wandb(config=None):
@@ -12,9 +12,9 @@ def train_with_wandb(config=None):
     with wandb.init(config=config) as run:
         config = wandb.config
 
-        local_project_name = f"{runs_save_dir}/{project_name}/{sweep_id}"
+        local_project_name = f"{runs_save_dir}/{project_name}/{sweep_name}/{sweep_id}"
         print(f"Running hyperparameter optimization in project {local_project_name} with config: {config}")
-        finetuner = YOLOfinetuner(**config, name=run.name, project=local_project_name)
+        finetuner = YOLOFinetuner(**config, name=run.name, project=local_project_name)
         results_train = finetuner.train_model()
         
         evaluator_args = {
@@ -24,7 +24,7 @@ def train_with_wandb(config=None):
             'project': local_project_name,
             'split': 'val'  # Assuming we want to evaluate on the validation set
         }
-        evaluator = YOLOevaluator(**evaluator_args)
+        evaluator = YOLOEvaluator(**evaluator_args)
         val_results = evaluator.evaluate_model()
 
         metrics_to_log = {}
@@ -83,7 +83,7 @@ def run_hyperparameter_optimization(project, data, model, sweep_count=50, epochs
         
     sweep_config['parameters']['data'] = {'value': data}
     sweep_config['parameters']['model'] = {'value': model}
-    sweep_config['parameters']['val'] = {'value': True}
+    sweep_config['parameters']['val'] = {'value': False}
     sweep_config['parameters']['workers'] = {'value': workers}
     sweep_config['parameters']['fraction'] = {'value': data_fraction}
     # sweep_config['parameters']['epochs'] = {'value': epochs}  # Fixed number of epochs for all runs
@@ -100,7 +100,7 @@ def run_hyperparameter_optimization(project, data, model, sweep_count=50, epochs
     print("Hyperparameter optimization completed!")
 
 if __name__ == "__main__":
-    global project_name
+    global project_name, sweep_name
     parser = argparse.ArgumentParser(description='Run hyperparameter optimization for YOLO model.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--model', type=str, default='yolo11n.pt', help='Path to the YOLO model file.')
     parser.add_argument('--data', type=str, required=True, help='Path to the dataset configuration file.')
@@ -121,6 +121,7 @@ if __name__ == "__main__":
     
     args.fraction /= 100 # Convert percentage to fraction for YOLO
     project_name = args.project
+    sweep_name = args.sweep_name
     settings.update({"wandb": True}) ## to make sure intra-sweep (epoch-wise) logging is enabled
 
     # Use default hyperparameter optimization

@@ -3,7 +3,7 @@ import os
 import yaml
 import argparse
 
-class YOLOevaluator:
+class YOLOEvaluator:
     def __init__(self, **kwargs):
         if kwargs.get('model') is None:
             run_dir = kwargs.get('run', None)
@@ -100,6 +100,6 @@ if __name__ == "__main__":
     args.classes = list(map(int, args.classes.split(','))) if args.classes else None
 
     val_kwargs = vars(args)
-    evaluator = YOLOevaluator(**val_kwargs)
+    evaluator = YOLOEvaluator(**val_kwargs)
     results = evaluator.evaluate_model()
     # print(results)  # Print the evaluation results
