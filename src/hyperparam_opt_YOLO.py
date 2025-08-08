@@ -70,10 +70,10 @@ def run_hyperparameter_optimization(project, data, model, sweep_count=50, epochs
             'imgsz': {'values': [480, 640, 800, 960]},
             'eval_imgsz': {'values': [480, 640, 800, 960]},
             'multi_scale': {'values': [0, 1]}, # making numeric for ease of plotting in WandB
-            'epochs': {'values': [5, 10, 20]},
+            'epochs': {'values': [2]},
             
             # Architecture parameters
-            'freeze': {'values': [17, 20, 23]}#{'distribution': 'int_uniform', 'min': 10, 'max': 20},
+            'freeze': {'values': ([16, 19, 22] if 'world' in model else [17, 20, 23])}#{'distribution': 'int_uniform', 'min': 10, 'max': 20},
         }
     }
     
@@ -104,7 +104,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run hyperparameter optimization for YOLO model.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--model', type=str, default='yolo11n.pt', help='Path to the YOLO model file.')
     parser.add_argument('--data', type=str, required=True, help='Path to the dataset configuration file.')
-    parser.add_argument('--fraction', type=float, default=1.0, help='Fraction of the dataset to use for training.')
+    parser.add_argument('--fraction', type=float, default=100, help='Fraction of the dataset to use for training.')
     parser.add_argument('--workers', type=int, default=16, help='Number of workers for data loading.')
     
     # parser.add_argument('--epochs', type=int, default=20, help='Number of epochs for training in each hyperparameter run.')
@@ -119,6 +119,7 @@ if __name__ == "__main__":
     if args.project == '{dataset_name}':
         args.project = f'{args.data.split("/")[-1].split(".")[0]}'
     
+    args.fraction /= 100 # Convert percentage to fraction for YOLO
     project_name = args.project
     settings.update({"wandb": True}) ## to make sure intra-sweep (epoch-wise) logging is enabled
 

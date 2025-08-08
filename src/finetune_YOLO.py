@@ -14,12 +14,12 @@ class YOLOfinetuner:
                 data = yaml.safe_load(f.read())
             data_names = data.get('names', None)
             if isinstance(data_names, list):
-                self.class_names = data_names
+                self.class_names = [x.replace('_',' ') for x in data_names]
             elif isinstance(data_names, dict):
-                self.class_names = list(data_names.values())
+                self.class_names = [data_names[i].replace('_',' ') for i in sorted(data_names.keys())]
             else:
                 raise ValueError("Invalid 'names' format in data config.")
-            
+            print('Using class names:', self.class_names)
             self.model.set_classes(self.class_names)
         else:
             self.model = YOLO(model_name, task='detect')

@@ -1,11 +1,5 @@
-for fraction in 0.1 0.2 0.5 1.0; do
-    frac_full=${fraction/0./}
-    if [ "$fraction" = "1.0" ]; then
-        frac_full=100
-    else
-        frac_full=${frac_full}0
-    fi
-    python src/hyperparam_opt_YOLO.py --sweep_count 25 --fraction $fraction --data /home/data/configs/pace_v2.yaml --project pace-v2 --sweep_name YOLOWorld-real-only-$frac_full --model yolov8x-worldv2.pt
+for fraction in 10 20 50 100; do
+    python src/hyperparam_opt_YOLO.py --sweep_count 25 --fraction $fraction --data /home/data/configs/pace_v2.yaml --project pace-v2 --sweep_name YOLOWorld-real-only-$fraction --model yolov8s-worldv2.pt
 done
 
 # for fraction in 0.1 0.2 0.5 1.0; do
