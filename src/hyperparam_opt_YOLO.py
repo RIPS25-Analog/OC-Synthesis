@@ -70,7 +70,7 @@ def run_hyperparameter_optimization(project, data, model, sweep_count=50, epochs
             'imgsz': {'values': [480, 640, 800, 960]},
             'eval_imgsz': {'values': [480, 640, 800, 960]},
             'multi_scale': {'values': [0, 1]}, # making numeric for ease of plotting in WandB
-            'epochs': {'values': [2]},
+            'epochs': {'values': [5, 10, 20]},
             
             # Architecture parameters
             'freeze': {'values': ([16, 19, 22] if 'world' in model else [17, 20, 23])}#{'distribution': 'int_uniform', 'min': 10, 'max': 20},
