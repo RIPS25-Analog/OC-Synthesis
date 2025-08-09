@@ -41,7 +41,7 @@ for sweep_name_dir in sorted(glob.glob(os.path.join(root_dir, '*-*-*/'))):
 				
 ## Find the k best performing runs for a given sweep set directory
 ## use the metrics/mAP50(B) value from the metrics entry of the simple_evaluation_results.yaml file in the val dirs
-top_k = 3
+top_k = 1
 best_runs_for_set = dict()
 for sweep_name_dir in glob.glob(os.path.join(root_dir, '*-*-*/')):
 	sweep_ids = [x for x in os.listdir(sweep_name_dir) if x!='discarded']
@@ -79,14 +79,20 @@ for sweep_name_dir in glob.glob(os.path.join(root_dir, '*-*-*/')):
 	
 	for run, old_mAP in best_runs:
 		print(f"Re-finetuning {run} with old mAP {old_mAP*100:.2f}%")
-		## get args.yaml file 
+
 		args = yaml.safe_load(open(os.path.join(sweep_dir, run, 'args.yaml')))
 		args['epochs'] = 50
 		args['patience'] = 20
 		args['name'] = args['name'] + '_extended'
 		args['save_dir'] = os.path.join(sweep_dir, args['name'])
-		args['data'] = '/home/data/configs/pace_v2.yaml'
+		args['data'] = args['data'].replace('pace-v2-val.yaml', 'pace-v2.yaml')
 		args['project'] = sweep_dir.replace('pace-v2/', 'pace-v2-extended/')
+		args['val'] = True
+
+		full_run_name = args['project']+args['name']
+		if os.path.exists(full_run_name):
+			print(f"Project directory {full_run_name} already exists, skipping {run}")
+			continue
 		
 		# ############################### TEMP #######################################################################
 		# args['epochs'] = 2
@@ -97,8 +103,8 @@ for sweep_name_dir in glob.glob(os.path.join(root_dir, '*-*-*/')):
 		
 		evaluator_args = {
 			'run': str(results_train.save_dir),
-			'batch': config.get('batch', 32),
-			'imgsz': config.get('eval_imgsz', 640),
+			'batch': 32,
+			# 'imgsz': config.get('eval_imgsz', 640),
 			'project': args['project'],
 			'split': 'test',  # Evaluate on the final test set
 			'name': 'val_'+args['name'],
