@@ -63,7 +63,7 @@ for sweep_name_dir in glob.glob(os.path.join(root_dir, '*-*-*/')):
 				map50_scores[run_name] = mAP50
 				
 	sweep_set_id = sweep_dir.split('/')[-1]
-	best_runs_for_set[sweep_set_id] = sorted(map50_scores.items(), key=lambda x: x[1], reverse=True)[:3]
+	best_runs_for_set[sweep_set_id] = sorted(map50_scores.items(), key=lambda x: x[1], reverse=True)[:top_k]
 	print(f"Best runs in set {sweep_dir}:")
 	for run, score in best_runs_for_set[sweep_set_id]	:
 		print(f" - {run}: {score*100:.2f}%") # print percentage to 2 decimal place
@@ -89,9 +89,9 @@ for sweep_name_dir in glob.glob(os.path.join(root_dir, '*-*-*/')):
 		args['project'] = sweep_dir.replace('pace-v2/', 'pace-v2-extended/')
 		args['val'] = True
 
-		full_run_name = args['project']+args['name']
+		full_run_name = os.path.join(args['project'], args['name'])
 		if os.path.exists(full_run_name):
-			print(f"Project directory {full_run_name} already exists, skipping {run}")
+			print(f"Project directory {full_run_name} in {args['project']} already exists, skipping {run}")
 			continue
 		
 		# ############################### TEMP #######################################################################
