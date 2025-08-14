@@ -6,6 +6,8 @@ from finetune_YOLO import YOLOFinetuner
 from evaluate_YOLO import YOLOEvaluator
 
 runs_save_dir = '/home/wandb-runs'
+wandb_prefix = 'vikhyat-3-org/pace-v2/'
+
 def train_with_wandb(config=None):
     """Training function to be called by WandB sweep agent."""
 
@@ -103,6 +105,7 @@ if __name__ == "__main__":
     global project_name, sweep_name
     parser = argparse.ArgumentParser(description='Run hyperparameter optimization for YOLO model.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--model', type=str, default='yolo11n.pt', help='Path to the YOLO model file.')
+    parser.add_argument('--parent_sweep_name_dir', type=str, default=None, help='Start model training from the best model found in a given sweep directory.')
     parser.add_argument('--data', type=str, required=True, help='Path to the dataset configuration file.')
     parser.add_argument('--fraction', type=float, default=100, help='Fraction of the dataset to use for training.')
     parser.add_argument('--workers', type=int, default=16, help='Number of workers for data loading.')
@@ -118,7 +121,21 @@ if __name__ == "__main__":
 
     if args.project == '{dataset_name}':
         args.project = f'{args.data.split("/")[-1].split(".")[0]}'
-    
+
+    if args.parent_sweep_name_dir is not None:
+        # Find best weights for best sweep in given sweep name directory
+        sweep_name_dir = args.parent_sweep_name_dir
+        sweep_ids = [x for x in os.listdir(sweep_name_dir) if x!='discarded']
+        assert len(sweep_ids)==1, f"{len(sweep_ids)} sweeps found in {sweep_name_dir}, unsure which to use, so skipping"
+        sweep_id = sweep_ids[0]
+
+        wandb_api = wandb.Api()
+        sweep = wandb_api.sweep(wandb_prefix + sweep_id)
+        best_run = sorted(sweep.runs, key=lambda run: run.summary.get("mAP50", 0), reverse=True)[0]
+        args.model = os.path.join(sweep_name_dir, sweep_id, best_run.name + '_extended', 'weights', 'best.pt')
+        assert os.path.exists(args.model), f"Best model not found: {args.model}"
+        del args.parent_sweep_name_dir
+
     args.fraction /= 100 # Convert percentage to fraction for YOLO
     project_name = args.project
     sweep_name = args.sweep_name

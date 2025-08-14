@@ -1,8 +1,12 @@
+import os
+import wandb
 import yaml
 from ultralytics import YOLO
 from ultralytics import YOLOWorld
 import argparse
 from ultralytics import settings
+
+wandb_prefix = 'vikhyat-3-org/pace-v2/'
 
 class YOLOFinetuner:
     def __init__(self, **kwargs):
@@ -46,12 +50,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train a YOLO model with specified parameters.',
                                       formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--model', type=str, default='yolo11n.pt', help='Path to the YOLO model file.')
+    parser.add_argument('--parent_sweep_name_dir', type=str, default=None, help='Start model training from the best model found in a given sweep directory.')
     parser.add_argument('--data', type=str, required=True, help='Path to the dataset configuration file.')
     parser.add_argument('--project', type=str, default=None, help='Project name for saving results.')
     parser.add_argument('--name', type=str, default=None, help='Name of the training run.')   
+
     parser.add_argument('--workers', type=int, default=16, help='Number of workers for data loading.')
     parser.add_argument('--no_wandb', action='store_true', help='Disable Weights & Biases logging.')
     parser.add_argument('--val', type=bool, default=True, help='Enable validation during training.')
+    parser.add_argument('--fraction', type=float, default=1.0, help='Fraction of the dataset to use for training.')
     
     parser.add_argument('--epochs', type=int, default=100, help='Number of training epochs.')
     parser.add_argument('--batch', type=int, default=32, help='Batch size.')
@@ -73,7 +80,6 @@ if __name__ == "__main__":
     parser.add_argument('--dfl', type=float, default=1.5, help='Distribution focal loss gain.')
     parser.add_argument('--nbs', type=int, default=64, help='Nominal batch size.')
     parser.add_argument('--dropout', type=float, default=0.0, help='Use dropout regularization.')
-    parser.add_argument('--fraction', type=float, default=1.0, help='Fraction of the dataset to use for training.')
     
     args = parser.parse_args()
 
@@ -86,6 +92,20 @@ if __name__ == "__main__":
 
     if args.project is None:
         args.project = '/home/wandb-runs/' + args.data.split('/')[-1].split('.')[0]
+
+    if args.parent_sweep_name_dir is not None:
+        assert args.model==parser.get_default('model'), "Cannot specify model when parent_sweep_name_dir being used"
+        # Find best weights for best sweep in given sweep name directory
+        sweep_name_dir = args.parent_sweep_name_dir
+        sweep_ids = [x for x in os.listdir(sweep_name_dir) if x!='discarded']
+        assert len(sweep_ids)==1, f"{len(sweep_ids)} sweeps found in {sweep_name_dir}, unsure which to use, so skipping"
+        sweep_id = sweep_ids[0]
+        
+        wandb_api = wandb.Api()
+        sweep = wandb_api.sweep(wandb_prefix + sweep_id)
+        best_run = sorted(sweep.runs, key=lambda run: run.summary.get("mAP50", 0), reverse=True)[0]
+        args.model = os.path.join(sweep_name_dir, sweep_id, best_run.name + '_extended', 'weights', 'best.pt')
+        del args.parent_sweep_name_dir
 
     # Convert args into dictionary
     train_kwargs = vars(args)

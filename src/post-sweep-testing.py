@@ -5,10 +5,10 @@ import wandb
 from finetune_YOLO import YOLOFinetuner
 from evaluate_YOLO import YOLOEvaluator
 
+wandb_prefix = 'vikhyat-3-org/pace-v2/'
 root_dir = '/home/wandb-runs/pace-v2/'
 orig_project_name, extended_project_name = 'pace-v2', 'pace-v2-extended'
 extended_project_dir = root_dir.replace(orig_project_name, extended_project_name)
-wandb_prefix = 'vikhyat-3-org/pace-v2/'
 
 wandb_api = wandb.Api()
 				
@@ -27,12 +27,18 @@ for sweep_name_dir in glob.glob(os.path.join(root_dir, '*/')):
 	sweep = wandb_api.sweep(wandb_prefix + sweep_id)
 	best_run = sorted(sweep.runs, key=lambda run: run.summary.get("mAP50", 0), reverse=True)[0]
 
-	full_run_name = os.path.join(extended_project_dir, best_run.sweep.name, best_run.sweep.id, best_run.sweep.name+'_extended')
+	full_run_name = os.path.join(extended_project_dir, best_run.sweep.name, best_run.sweep.id, best_run.name+'_extended')
 	if os.path.exists(full_run_name):
+		val_results_path = os.path.join(extended_project_dir, best_run.sweep.name, best_run.sweep.id, 'val_'+best_run.name+'_extended', 'simple_evaluation_results.yaml')
+		assert os.path.exists(val_results_path), f"Extended run dir found but evaluation results missing: {val_results_path}"
+			
 		print(f"Extended run {full_run_name} already exists, skipping.")
 		continue
 
 	mAP50 = best_run.summary.get("mAP50", None)
+	if mAP50 is None:
+		print(f"mAP50 not found for only run {best_run.name} in sweep {sweep_id}")
+		continue
 	print(f"Best run found to extend in {sweep_name_dir}: {best_run.name} with mAP50={mAP50}")
 
 	args = yaml.safe_load(open(os.path.join(sweep_dir, best_run.name, 'args.yaml')))
@@ -40,7 +46,7 @@ for sweep_name_dir in glob.glob(os.path.join(root_dir, '*/')):
 	args['patience'] = 20
 	args['name'] = args['name'] + '_extended'
 	args['save_dir'] = os.path.join(sweep_dir.replace(orig_project_name, extended_project_name), args['name'])
-	args['data'] = args['data'].replace('pace-v2-val.yaml', 'pace-v2.yaml')
+	args['data'] = args['data'].replace('pace-v2-val.yaml', 'pace_v2.yaml')
 	args['project'] = sweep_dir.replace(orig_project_name, extended_project_name)
 	args['val'] = True
 
