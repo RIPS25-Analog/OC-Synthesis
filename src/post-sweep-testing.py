@@ -40,38 +40,42 @@ for sweep_name_dir in glob.glob(os.path.join(root_dir, '*/')):
 		print(f"mAP50 not found for only run {best_run.name} in sweep {sweep_id}")
 		continue
 	print(f"Best run found to extend in {sweep_name_dir}: {best_run.name} with mAP50={mAP50}")
+	print(f"\t succesfully checked that {full_run_name} didn't exist")
 
 	args = yaml.safe_load(open(os.path.join(sweep_dir, best_run.name, 'args.yaml')))
 	args['epochs'] = 50
 	args['patience'] = 20
-	args['name'] = args['name'] + '_extended'
-	args['save_dir'] = os.path.join(sweep_dir.replace(orig_project_name, extended_project_name), args['name'])
 	args['data'] = args['data'].replace('pace-v2-val.yaml', 'pace_v2.yaml')
-	args['project'] = sweep_dir.replace(orig_project_name, extended_project_name)
+	args['name'] = best_run.sweep.name + '__' + best_run.sweep.id + '__' + best_run.name
+	args['project'] = extended_project_name
+	args['save_dir'] = os.path.join('/home/wandb-runs/') #, extended_project_name, best_run.sweep.name, best_run.sweep.id)
 	args['val'] = True
+	print(f"\t Save Dir: {args['save_dir']}")
 
 	# ############################### TEMP #######################################################################
 	# args['epochs'] = 2
 	# args['fraction'] = 0.001	
 	runs_to_extend.append((best_run, args))
 
-for run, args in runs_to_extend:				
-		yolo_finetuner = YOLOFinetuner(**args)
-		results_train = yolo_finetuner.train_model()
+for run, args in runs_to_extend:
+	print(f"\n\nNow working on extending run {args['name']}; being saved to {args['save_dir']}")
+	yolo_finetuner = YOLOFinetuner(**args)
+	results_train = yolo_finetuner.train_model()
 
-		run_name = run
-		eval_imgsz = run.config['eval_imgsz']
-		evaluator_args = {
-			'run': str(results_train.save_dir),
-			'batch': 32,
-			'imgsz': eval_imgsz,
-			'project': args['project'],
-			'split': 'test',  # Evaluate on the final test set
-			'name': 'val_'+args['name'],
-		}
+	run_name = run
+	eval_imgsz = run.config['eval_imgsz']
+	evaluator_args = {
+		'run': str(results_train.save_dir),
+		'batch': 32,
+		'imgsz': eval_imgsz,
+		'project': args['project'],
+		'split': 'test',  # Evaluate on the final test set
+		'name': 'val_'+args['name'],
+		'save_dir': args['save_dir']
+	}
 
-		evaluator = YOLOEvaluator(**evaluator_args)
-		val_results = evaluator.evaluate_model()
+	evaluator = YOLOEvaluator(**evaluator_args)
+	val_results = evaluator.evaluate_model()
 
-		print('Basic metrics:')
-		print(val_results.get('metrics'))
+	print('Basic metrics:')
+	print(val_results.get('metrics'))

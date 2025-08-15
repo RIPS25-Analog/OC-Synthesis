@@ -1,8 +1,8 @@
 import os
 import wandb
 import yaml
-from ultralytics import YOLO
-from ultralytics import YOLOWorld
+from ultralytics import YOLO, YOLOWorld
+from ultralytics.utils.files import WorkingDirectory
 import argparse
 from ultralytics import settings
 
@@ -39,13 +39,21 @@ class YOLOFinetuner:
             kwargs['optimizer'] = 'Adam'  # Use Adam optimizer by default
         if 'multi_scale' in kwargs:
             kwargs['multi_scale'] = bool(kwargs['multi_scale'])
-            
+
+        if 'save_dir' in kwargs:
+            self.save_dir = kwargs['save_dir']
+            del kwargs['save_dir']  # Remove save_dir from kwargs to avoid passing it to YOLO
+        else:
+            self.save_dir = os.path.join('/home/wandb-runs') # project_name/run_name gets added automatically
+        os.makedirs(self.save_dir, exist_ok=True)
+
         self.train_params = kwargs
         
     def train_model(self):
-        results = self.model.train(**self.train_params)
-        return results     
-    
+        with WorkingDirectory(self.save_dir):
+            results = self.model.train(**self.train_params)
+        return results
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train a YOLO model with specified parameters.',
                                       formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -91,7 +99,7 @@ if __name__ == "__main__":
     del args.no_wandb  # Remove no_wandb from args to avoid passing it to YOLO
 
     if args.project is None:
-        args.project = '/home/wandb-runs/' + args.data.split('/')[-1].split('.')[0]
+        args.project = args.data.split('/')[-1].split('.')[0]
 
     if args.parent_sweep_name_dir is not None:
         assert args.model==parser.get_default('model'), "Cannot specify model when parent_sweep_name_dir being used"
