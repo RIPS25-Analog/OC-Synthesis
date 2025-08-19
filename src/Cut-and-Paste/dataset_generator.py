@@ -17,7 +17,7 @@ import random
 from PIL import Image, ImageOps
 import cv2
 
-from pyblur.LinearMotionBlur import LinearMotionBlur
+from LinearMotionBlur import LinearMotionBlur
 from datetime import datetime
 
 import post_processing
@@ -517,7 +517,7 @@ def init_worker():
  
 def generate_synthetic_dataset(args):
 	''' Generate synthetic dataset according to given args '''
-	img_files = glob.glob(os.path.join(args.root, '*', 'images', '*'))[:args.max_obj_images]
+	img_files = glob.glob(os.path.join(args.root, '*', 'images', '*'))
 	random.shuffle(img_files)
 	class_names = [img_file.split('/')[-3] for img_file in img_files]
 
@@ -549,34 +549,28 @@ if __name__ == '__main__':
 	  help="The root directory which contains the images and annotations.")
 	parser.add_argument("exp",
 	  help="The directory where images and annotation lists will be created.")
-	parser.add_argument("--selected",
-	  help="Keep only selected instances in the test dataset. Default is to keep all instances in the root directory", action="store_true")
-	parser.add_argument("--no_scale",
-	  help="Remove scale augmentation. Default is to add scale augmentation.", action="store_true")
-	parser.add_argument("--no_rotation",
-	  help="Remove rotation augmentation. Default is to add rotation data augmentation.", action="store_true")
-	# parser.add_argument("--num",
-	#   help="Number of times each image will be in dataset", default=1, type=int)
 	parser.add_argument("--n_images",
 	  help="Number of images to generate (divided by 5 for different blending modes)", default=10000, type=int)
+	parser.add_argument("--dont_scale",
+	  help="Remove scale augmentation. Default is to add scale augmentation.", action="store_true")
+	parser.add_argument("--dont_rotate",
+	  help="Remove rotation augmentation. Default is to add rotation data augmentation.", action="store_true")
 	parser.add_argument("--allow_full_occlusion",
 	  help="Allow complete occlusion between objects (faster). Default is to avoid high occlusions (as defined by MAX_OCCLUSION_IOU)", action="store_true")
-	parser.add_argument("--no_distractors",
+	parser.add_argument("--dont_add_distractors",
 	  help="Don't add distractors objects. Default is to add distractors", action="store_true")
 	parser.add_argument("--dont_parallelize",
 	  help="Run the dataset generation in serial mode. Default is to run in parallel mode", action="store_true")
-	parser.add_argument("--max_obj_images",
-	  help="Maximum number of object images to use overall", default=int(1e9), type=int)
 	args = parser.parse_args()
 
 	args.parallelize = not args.dont_parallelize
-	args.scale = not args.no_scale
-	args.rotation = not args.no_rotation
-	args.add_distractors = not args.no_distractors
-	del args.no_scale
-	del args.no_rotation
+	args.scale = not args.dont_scale
+	args.rotation = not args.dont_rotate
+	args.add_distractors = not args.dont_add_distractors
+	del args.dont_scale
+	del args.dont_rotate
 	del args.dont_parallelize
-	del args.no_distractors
+	del args.dont_add_distractors
 
 	if not os.path.exists(args.exp):
 		os.makedirs(args.exp)
