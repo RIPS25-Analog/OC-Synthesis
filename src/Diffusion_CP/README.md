@@ -22,7 +22,7 @@ Navigate to your home folder and clone the following repository:
 git clone https://github.com/RIPS25-Analog/RIPS25-AnalogDevices-ObjectDetection.git
 ```
 
-Navigate to ``src/Diffusion_CnP`` in this repository and install the requirements:
+Navigate to ``src/Diffusion_CP`` in this repository and install the requirements:
 ```
 pip install -r requirements.txt
 ```
