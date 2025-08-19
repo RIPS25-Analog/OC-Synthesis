@@ -27,7 +27,6 @@ from torchvision.transforms.functional import pil_to_tensor
 from torchvision.transforms import GaussianBlur
 
 from defaults import *
-from pyblur import LinearMotionBlur
 
 seed = 2
 np.random.seed(seed)
@@ -134,26 +133,6 @@ def randomAngle(kerneldim):
 	numDistinctLines = kernelCenter * 4
 	validLineAngles = np.linspace(0,180, numDistinctLines, endpoint=False)
 	return int(np.random.choice(validLineAngles))
-
-
-def LinearMotionBlur3C(img):
-	"""Performs motion blur on an image with 3 channels. Used to simulate blurring caused due to motion of camera.
-
-	Args: img(NumPy Array): Input image with 3 channels
-	Returns: Image: Blurred image by applying a motion blur with random parameters
-	"""
-	lineLengths = [3,5,7,9]
-	lineTypes = ["right", "left", "full"]
-	lineLength = np.random.choice(lineLengths)
-	lineType = np.random.choice(lineTypes)
-	lineAngle = randomAngle(lineLength)
-	blurred_img = img
-	
-	for i in range(3):
-		blurred_img[:,:,i] = PIL2array1C(LinearMotionBlur(img[:,:,i], lineLength, lineAngle, lineType))
-	
-	blurred_img = Image.fromarray(blurred_img, 'RGB')
-	return blurred_img
 
 
 def get_mask_overlap(mask1, mask2):
