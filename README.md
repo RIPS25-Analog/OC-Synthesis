@@ -1,6 +1,4 @@
-# RIPS25-AnalogDevices-ObjectDetection
-
-## Setup instructions:
+# Setup instructions:
 
 ```
 python -m venv env
@@ -9,11 +7,11 @@ pip install ultralytics, wandb
 wandb login  # put API key
 ```
 
-## Data file structure
+# Data file structure
 
 Create a data directory like ```/home/data```, with subfolders called ```raw``` and ```processed```
 
-### Real annotated data
+## Real annotated data
 
 The real annotated data should be contain images and labels within train-val-test splits:
 
@@ -26,7 +24,7 @@ The real annotated data should be contain images and labels within train-val-tes
     └── test/               # same subfoldering as above
 ```
 
-### 2D Approaches: Foreground Object & Background Data
+## 2D Approaches: Foreground Object & Background Data
 
 Cut-n-Paste and Diffusion require a folder with images of foreground objects and a mask for each image, as well as a folder with background images:
 
@@ -35,17 +33,37 @@ Cut-n-Paste and Diffusion require a folder with images of foreground objects and
     ├── foreground_objects/
     |   ├── class_name_1
     |   |   ├── images              # images of the same file type (e.g: 4_5.png, 15_10.png)
-    |   |   └── masks               # masks with same filenames as correspoonding images plus _mask attached at end (e.g: 4_5_mask.png, 15_10_mask.png)
+    |   |   └── masks               # masks with same filenames as corresponding images plus _mask attached at end (e.g: 4_5_mask.png, 15_10_mask.png)
     |   ├── ...
     |   └── class_name_8
-    |       ├── images
-    |       └── masks
     └── backgrounds/                # backgrounds of the same file type (e.g: 1.png, 2.png)
 ```
 
-### 3D Approaches
+## 3D Approaches
 
-## Running scripts
+3D Random Placement and 3D Copy-Paste require a folder with 3d models of objects, as well as folders with HDRI backgrounds and RGBD backgrounds
+
+``` 
+└── /home/data/raw/[dataset_name]
+    ├── 3d_models/
+    |   ├── class_name_1            # e.g: hammers
+    |   |   ├── instance1           # e.g: big red hammer
+    |   |   |   ├── instance1.obj   # 3D OBJ file
+    |   |   |   ├── instance1.mtl   # MTL file to map texture image to object's faces
+    |   |   |   └── instance1.png   # texture for 3d object
+    |   |   ├── ...
+    |   |   └── instance5           
+    |   ├── ...
+    |   ├── ...
+    |   └── class_name_8
+    └── backgrounds/
+        ├── HDRI                    # contains HDRI background files of .exr filetype
+        └── RGBD
+            ├── image               # contains RGB images of the same filetype  (e.g: 0001.jpg)
+            └── depth               # contains depth images with same filenames as corresponding images (e.g: 0001.mat)
+```
+
+# Running scripts
 
 To finetune YOLO on a specific data file: 
 
@@ -62,30 +80,3 @@ To run hyperopt for YOLO finetune on a specific data file:
 To generate Cut n Paste dataset: 
 
 ``` python src/Cut-and-Paste/dataset_generator.py --n_images 100 /home/data/pace/toycar_can_v2-extra/foreground_objects/ /home/data/processed/cnp-pace/test-100 ```
-
-## Folder structure
-
-```
-├── repo-name/src/                      # All code
-|   ├── finetune_YOLO.py
-|   ├── evaluate_YOLO.py
-|   └── fetch-openimages-data.ipynb     # downloads class-specific images from Google's Open Images dataset into data/raw/, processes them into data/processed/
-├── /home/wandb-runs/                   # Saved logs and results, organized into subfolders by run ID
-└── /home/data/
-    ├── raw/                            # Original custom object images or backgrounds
-    |   ├── kaggle_v0/
-    |   ├── simple-backgrounds-v0/
-    |   └── 3d-objects-v0/
-    ├── processed/                      # Final dataset, organized into subfolders by different synthetic methods/versions
-    |   ├── kaggle-cnp-v0/
-    |   |   └── synthetic-1065/         # described data mix and number of total images in each dataset
-    |   |   |   ├── train/
-    |   |   |   |   ├── images/
-    |   |   |   |   └── labels/
-    |   |   |   ├── val/                # same subfoldering as above: images and labels
-    |   |   |   └── test/               # same subfoldering as above: images and labels
-    |   └── cut-and-paste-v0/           # All datasets follow same structure
-    ├── cnp-v0-1065.yaml/              # YAML listing classes and paths to train-val-test(all cnp-v0) directories with 1065 images
-    └── cnp-v0-4985-mech-val.yaml/     # YAML listing classes and paths to train(cnp-v0)/val(mech)/test(mech) directories
-        
-```

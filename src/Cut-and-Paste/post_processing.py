@@ -2,9 +2,8 @@ import random
 import shutil
 import os
 import glob
-import defaults
 
-def filter_bboxes_classes_and_add_suffixes(source_dir, output_dir, classes_to_keep):
+def filter_bboxes_classes_and_add_suffixes(source_dir, output_dir, classes_to_keep, blending_list):
 	'''filter the labels in the source_dir to only include bounding boxes of certain classes, and write these labels to output_dir'''
 	if not os.path.exists(output_dir):
 		os.makedirs(output_dir)
@@ -20,7 +19,7 @@ def filter_bboxes_classes_and_add_suffixes(source_dir, output_dir, classes_to_ke
 				filtered_lines.append(line)
 		
 		# Write the filtered bounding boxes to a new file
-		for suffix in defaults.BLENDING_LIST:
+		for suffix in blending_list:
 			output_label_file = label_file.replace(source_dir, output_dir).replace('.txt', f'_{suffix}.txt')
 			if not os.path.exists(output_label_file):
 				with open(output_label_file, 'w') as f:
@@ -81,7 +80,7 @@ def split_cnp_into_train_val_test(source_dir, dest_parent_dir=None, train_ratio=
 		shutil.copy(img, os.path.join(dest_dir, os.path.basename(img)))
 		shutil.copy(label, os.path.join(label_dest_dir, os.path.basename(label)))
 
-def main(dataset_path, classes_to_keep):
+def main(dataset_path, classes_to_keep, blending_list):
 	# rename the folder at dataset_final_root to dataset_unsplit_root
 	dataset_final_root = dataset_path
 	dataset_unsplit_root = dataset_path + '-unsplit'
@@ -94,7 +93,8 @@ def main(dataset_path, classes_to_keep):
 		print(f"Renaming {os.path.join(dataset_unsplit_root, 'labels')} to {os.path.join(dataset_unsplit_root, 'labels-orig')}")
 		os.rename(os.path.join(dataset_unsplit_root, 'labels'), os.path.join(dataset_unsplit_root, 'labels-orig'))
 
-	filter_bboxes_classes_and_add_suffixes(os.path.join(dataset_unsplit_root, 'labels-orig'), os.path.join(dataset_unsplit_root, 'labels'), classes_to_keep)
+	filter_bboxes_classes_and_add_suffixes(os.path.join(dataset_unsplit_root, 'labels-orig'), os.path.join(dataset_unsplit_root, 'labels'),
+										 classes_to_keep, blending_list)
 
 	images = sorted(glob.glob(os.path.join(dataset_unsplit_root, 'images', '*.png'))+glob.glob(os.path.join(dataset_unsplit_root, 'images', '*.jpg')))
 	labels = sorted(glob.glob(os.path.join(dataset_unsplit_root, 'labels', '*.txt')))
@@ -117,4 +117,5 @@ def main(dataset_path, classes_to_keep):
 if __name__ == "__main__":
 	dataset_path = '/home/data/processed/cnp-pace/toycar_can_v0'
 	classes_to_keep = [0, 1]
-	main(dataset_path, classes_to_keep)
+	blending_list = ['gaussian', 'poisson', 'none', 'box', 'motion']
+	main(dataset_path, classes_to_keep, blending_list)
