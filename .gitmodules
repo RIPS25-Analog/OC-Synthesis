@@ -1,0 +1,3 @@
+[submodule "src/3D-Random-Placement"]
+	path = src/3D-Random-Placement
+	url = https://github.com/RIPS25-Analog/3D-Random-Placement.git
