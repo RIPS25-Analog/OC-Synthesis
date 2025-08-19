@@ -1,24 +1,47 @@
-from ultralytics import YOLO
 import os
 import yaml
 import argparse
+from ultralytics import YOLO, YOLOWorld
+from ultralytics.utils.files import WorkingDirectory
 
-class YOLOevaluator:
+class YOLOEvaluator:
     def __init__(self, **kwargs):
         if kwargs.get('model') is None:
             run_dir = kwargs.get('run', None)
             assert run_dir is not None, "If no model is provided, run must be specified."
             self.model_path = os.path.join(run_dir, 'weights', 'best.pt')
-            self.model = YOLO(self.model_path, task='detect')
             if kwargs.get('data', None) is None:
                 kwargs['data'] = self._get_data_from_model_yaml(run_dir)
         else:
             self.model_path = kwargs.get('model')
-            self.model = YOLO(self.model_path, task='detect')
             assert kwargs.get('data', None) is not None, "If a model is provided, data must also be specified."
+        
+        if 'world' in self.model_path:
+            self.model = YOLOWorld(self.model_path)
 
-        if kwargs.get('project', None) is None:
-            kwargs['project'] = '/home/wandb-runs/' + kwargs['data'].split('/')[-1].split('.')[0]
+            with open(kwargs['data'], 'r') as f:
+                data = yaml.safe_load(f.read())
+            data_names = data.get('names', None)
+            if isinstance(data_names, list):
+                self.class_names = [x.replace('_',' ') for x in data_names]
+            elif isinstance(data_names, dict):
+                self.class_names = [data_names[i].replace('_',' ') for i in sorted(data_names.keys())]
+            else:
+                raise ValueError("Invalid 'names' format in data config.")
+            print('Using class names:', self.class_names)
+            self.model.set_classes(self.class_names)
+        else:
+            self.model = YOLO(self.model_path, task='detect')
+
+        if ('project' not in kwargs) and ('save_dir' not in kwargs):
+            self.save_dir = os.path.join('/home/wandb-runs', kwargs['data'].split('/')[-1].split('.')[0])
+        
+        if 'save_dir' in kwargs:
+            self.save_dir = kwargs['save_dir']
+            del kwargs['save_dir']  # Remove save_dir from kwargs to avoid passing it to YOLO
+        else:
+            self.save_dir = os.path.join('/home/wandb-runs', kwargs.get('project', 'yolo_finetune'))
+        os.makedirs(self.save_dir, exist_ok=True)
 
         if 'run' in kwargs: del kwargs['run']
         if 'model' in kwargs: del kwargs['model']
@@ -39,7 +62,8 @@ class YOLOevaluator:
     def evaluate_model(self):
         """Evaluate the YOLO model and return results."""
         print(f"Evaluating on dataset: {self.val_params.get('data')} with split: {self.val_params.get('split')}")
-        results = self.model.val(**self.val_params)
+        with WorkingDirectory(self.save_dir):
+            results = self.model.val(**self.val_params)
         
         # Print the evaluation results
         print("Evaluation Results:")
@@ -85,6 +109,6 @@ if __name__ == "__main__":
     args.classes = list(map(int, args.classes.split(','))) if args.classes else None
 
     val_kwargs = vars(args)
-    evaluator = YOLOevaluator(**val_kwargs)
+    evaluator = YOLOEvaluator(**val_kwargs)
     results = evaluator.evaluate_model()
     # print(results)  # Print the evaluation results

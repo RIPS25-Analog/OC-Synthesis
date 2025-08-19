@@ -1,39 +1,32 @@
 import argparse
 import wandb
 import os
-from finetune_YOLO import YOLOfinetuner
-from evaluate_YOLO import YOLOevaluator
+from ultralytics import settings
+from finetune_YOLO import YOLOFinetuner
+from evaluate_YOLO import YOLOEvaluator
+
+runs_save_dir = '/home/wandb-runs'
+wandb_prefix = 'vikhyat-3-org/pace-v2/'
 
 def train_with_wandb(config=None):
     """Training function to be called by WandB sweep agent."""
 
     with wandb.init(config=config) as run:
         config = wandb.config
-    
-        project_name = f"/home/wandb-runs/{config.data.split('/')[-1].split('.')[0]}/{sweep_id}"
-        run_name = run.name
-        finetune_args = {'data': config.data,
-                        'model': config.model,
-                        'epochs': config.epochs,
-                        'batch': config.batch,
-                        'imgsz': config.imgsz,
-                        'freeze': config.freeze,
-                        'project': project_name,
-                        'name': run_name,
-                        'val': False
-                        }
-        
-        finetuner = YOLOfinetuner(**finetune_args)
+
+        local_project_name = f"{runs_save_dir}/{project_name}/{sweep_name}/{sweep_id}"
+        print(f"Running hyperparameter optimization in project {local_project_name} with config: {config}")
+        finetuner = YOLOFinetuner(**config, name=run.name, project=local_project_name)
         results_train = finetuner.train_model()
         
         evaluator_args = {
             'run': str(results_train.save_dir),
-            'batch': config.batch,
-            'imgsz': config.imgsz,
-            'project': project_name,
+            'batch': config.get('batch', 32),
+            'imgsz': config.get('eval_imgsz', 640),
+            'project': local_project_name,
             'split': 'val'  # Assuming we want to evaluate on the validation set
         }
-        evaluator = YOLOevaluator(**evaluator_args)
+        evaluator = YOLOEvaluator(**evaluator_args)
         val_results = evaluator.evaluate_model()
 
         metrics_to_log = {}
@@ -47,17 +40,18 @@ def train_with_wandb(config=None):
         wandb.init(reinit=True, config=config)
         wandb.log(metrics_to_log)
 
-def run_hyperparameter_optimization(project_name, data, model, sweep_count=50, epochs=20, sweep_name='yolo_hyperparam_opt'):
+def run_hyperparameter_optimization(project, data, model, sweep_count=50, epochs=20, sweep_name='yolo_hyperparam_opt', data_fraction=1.0, workers=16):
     global sweep_id
     """Run hyperparameter optimization using WandB sweeps."""
     
     # Create sweep configuration
     sweep_config = {
-        'method': 'random',  # Can be 'grid', 'random', or 'bayes'
+        'method': 'bayes',  # Can be 'grid', 'random', or 'bayes'
         'metric': {'name': 'mAP50', 'goal': 'maximize'},
         'parameters': {
+            'optimizer': {'values': ['Adam']},
             # Learning rate parameters
-            # 'lr0': {'distribution': 'log_uniform_values', 'min': 0.0001, 'max': 0.1},
+            'lr0': {'distribution': 'log_uniform_values', 'min': 3e-5, 'max': 3e-3},
             # 'lrf': {'distribution': 'uniform', 'min': 0.001, 'max': 0.1},
             # 'momentum': {'distribution': 'uniform', 'min': 0.85, 'max': 0.95},
             # 'weight_decay': {'distribution': 'log_uniform_values', 'min': 0.0001, 'max': 0.001},
@@ -68,22 +62,20 @@ def run_hyperparameter_optimization(project_name, data, model, sweep_count=50, e
             # 'warmup_bias_lr': {'distribution': 'uniform', 'min': 0.05, 'max': 0.2},
 
             # # Loss function weights
-            # 'box': {'distribution': 'uniform', 'min': 5.0, 'max': 10.0},
-            # 'cls': {'distribution': 'uniform', 'min': 0.25, 'max': 1.0},
-            # 'dfl': {'distribution': 'uniform', 'min': 1.0, 'max': 2.0},
-
-            # # Regularization
-            # 'dropout': {'distribution': 'uniform', 'min': 0.0, 'max': 0.5},
-            # 'nbs': {'values': [32, 64, 128]},
+            # 'box': {'distribution': 'uniform', 'min': 1.0, 'max': 20.0},
+            # 'cls': {'distribution': 'uniform', 'min': 0.05, 'max': 2.0},
+            # 'dfl': {'distribution': 'uniform', 'min': 0.1, 'max': 5.0},
             
+            'close_mosaic': {'values': [5]},  # Close mosaic augmentation N epochs before training ends
             # Training parameters
             'batch': {'values': [32]},
             'imgsz': {'values': [480, 640, 800, 960]},
             'eval_imgsz': {'values': [480, 640, 800, 960]},
-            'multi_scale': {'values': [0,1]}, # making numeric for ease of plotting in WandB
+            'multi_scale': {'values': [0, 1]}, # making numeric for ease of plotting in WandB
+            'epochs': {'values': [5, 10, 20]},
             
             # Architecture parameters
-            'freeze': {'values': [10, 15, 20]}#{'distribution': 'int_uniform', 'min': 10, 'max': 20},
+            'freeze': {'values': ([16, 19, 22] if 'world' in model else [17, 20, 23])}#{'distribution': 'int_uniform', 'min': 10, 'max': 20},
         }
     }
     
@@ -93,12 +85,15 @@ def run_hyperparameter_optimization(project_name, data, model, sweep_count=50, e
         
     sweep_config['parameters']['data'] = {'value': data}
     sweep_config['parameters']['model'] = {'value': model}
-    sweep_config['parameters']['epochs'] = {'value': epochs}  # Fixed number of epochs for all runs
+    sweep_config['parameters']['val'] = {'value': False}
+    sweep_config['parameters']['workers'] = {'value': workers}
+    sweep_config['parameters']['fraction'] = {'value': data_fraction}
+    # sweep_config['parameters']['epochs'] = {'value': epochs}  # Fixed number of epochs for all runs
 
     # Initialize the sweep
-    sweep_id = wandb.sweep(sweep_config, project=project_name)
+    sweep_id = wandb.sweep(sweep_config, project=project)
     
-    print(f"Starting hyperparameter optimization sweep: {sweep_id} under WandB project {project_name}")
+    print(f"Starting hyperparameter optimization sweep: {sweep_id} under WandB project {project}")
     print(f"Number of runs: {sweep_count}")
     
     # Run the sweep
@@ -107,28 +102,53 @@ def run_hyperparameter_optimization(project_name, data, model, sweep_count=50, e
     print("Hyperparameter optimization completed!")
 
 if __name__ == "__main__":
+    global project_name, sweep_name
     parser = argparse.ArgumentParser(description='Run hyperparameter optimization for YOLO model.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--data', type=str, required=True, help='Path to the dataset configuration file.')
-    parser.add_argument('--project_name', type=str, default='runs-{dataset_name}', help='WandB project name for hyperparameter optimization.')
     parser.add_argument('--model', type=str, default='yolo11n.pt', help='Path to the YOLO model file.')
+    parser.add_argument('--parent_sweep_name_dir', type=str, default=None, help='Start model training from the best model found in a given sweep directory.')
+    parser.add_argument('--data', type=str, required=True, help='Path to the dataset configuration file.')
+    parser.add_argument('--fraction', type=float, default=100, help='Fraction of the dataset to use for training.')
+    parser.add_argument('--workers', type=int, default=16, help='Number of workers for data loading.')
+    
+    # parser.add_argument('--epochs', type=int, default=20, help='Number of epochs for training in each hyperparameter run.')
     parser.add_argument('--sweep_count', type=int, default=50, help='Number of hyperparameter combinations to try.')
-    parser.add_argument('--epochs', type=int, default=20, help='Number of epochs for training in each hyperparameter run.')
-    parser.add_argument('--workers', type=int, default=8, help='Number of workers for data loading.')
+    parser.add_argument('--project', type=str, default='{dataset_name}', help='WandB project name for hyperparameter optimization.')
     parser.add_argument('--sweep_name', type=str, default=None, help='Name of the WandB sweep.')
     args = parser.parse_args()
     
     # Validate required arguments
     assert os.path.exists(args.data), f"Data configuration file not found: {args.data}"
 
-    if args.project_name == 'runs-{dataset_name}':
-        args.project_name = f'runs-{args.data.split("/")[-1].split(".")[0]}'
+    if args.project == '{dataset_name}':
+        args.project = f'{args.data.split("/")[-1].split(".")[0]}'
+
+    if args.parent_sweep_name_dir is not None:
+        # Find best weights for best sweep in given sweep name directory
+        sweep_name_dir = args.parent_sweep_name_dir
+        sweep_ids = [x for x in os.listdir(sweep_name_dir) if x!='discarded']
+        assert len(sweep_ids)==1, f"{len(sweep_ids)} sweeps found in {sweep_name_dir}, unsure which to use, so skipping"
+        sweep_id = sweep_ids[0]
+
+        wandb_api = wandb.Api()
+        sweep = wandb_api.sweep(wandb_prefix + sweep_id)
+        best_run = sorted(sweep.runs, key=lambda run: run.summary.get("mAP50", 0), reverse=True)[0]
+        args.model = os.path.join(sweep_name_dir, sweep_id, best_run.name + '_extended', 'weights', 'best.pt')
+        assert os.path.exists(args.model), f"Best model not found: {args.model}"
+        del args.parent_sweep_name_dir
+
+    args.fraction /= 100 # Convert percentage to fraction for YOLO
+    project_name = args.project
+    sweep_name = args.sweep_name
+    settings.update({"wandb": True}) ## to make sure intra-sweep (epoch-wise) logging is enabled
 
     # Use default hyperparameter optimization
     run_hyperparameter_optimization(
-        project_name=args.project_name,
+        project=args.project,
         data=args.data,
         model=args.model,
         sweep_count=args.sweep_count,
-        epochs=args.epochs,
-        sweep_name=args.sweep_name
+        # epochs=args.epochs,
+        sweep_name=args.sweep_name,
+        data_fraction=args.fraction,
+        workers=args.workers
     )

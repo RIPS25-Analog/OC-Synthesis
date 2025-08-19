@@ -1,13 +1,8 @@
 # custom additions
 *.pt
-data/*/
-memleak-reproduced/data/
-dataold/
-download/
-.vscode/
-XmlToTxt-master/
 wandb/
 runs/
+.vscode/
 *.code-workspace
 
 # Byte-compiled / optimized / DLL files
