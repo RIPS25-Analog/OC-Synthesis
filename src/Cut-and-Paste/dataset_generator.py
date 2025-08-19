@@ -260,14 +260,15 @@ def create_image_anno(objects, img_file, anno_file, bg_file, label_map, w, h, sc
 
 			if scale_augment:
 				ACTUAL_MIN_SCALE = MIN_SCALED_DIM / min(o_w, o_h) # every object should be at least MIN_SCALED_DIM pixels in width/height
-				ACTUAL_MAX_SCALE = min(w,h) / max(o_w, o_h) # every object should be at most min(w,h) pixels in width/height
-				# the *0.9 ensures the object isn't exactly as wide/tall as the background since that may still give errors
+				ACTUAL_MAX_SCALE = min(w,h) / max(o_w, o_h) *0.95 # every object should be at most min(w,h) pixels in width/height
+				# the *0.95 ensures the object isn't exactly as wide/tall as the background since that may still give errors
 
 				# scale the object so it occupies similar fraciton of the image as it did in the original foreground image
 				length_scale = ((w*h) / (original_mask.size[0] * original_mask.size[1]))**0.5 
-				scale = random.uniform(max(MIN_SCALE*length_scale, ACTUAL_MIN_SCALE), min(ACTUAL_MAX_SCALE, MAX_SCALE*length_scale))*0.9
+				scale = random.uniform(max(MIN_SCALE*length_scale, ACTUAL_MIN_SCALE), min(ACTUAL_MAX_SCALE, MAX_SCALE*length_scale))
+
 				o_w, o_h = int(scale*o_w), int(scale*o_h)
-				assert w-o_w > 0 and h-o_h > 0 and o_w > 0 and o_h > 0, "Invalid object dimensions after scaling"
+				assert (0 < o_w < w) and (0 < o_h < h), "Invalid object dimensions after scaling"
 
 				foreground = foreground.resize((o_w, o_h), Image.LANCZOS)
 				mask = mask.resize((o_w, o_h), Image.LANCZOS)
