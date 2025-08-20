@@ -12,35 +12,37 @@ extended_project_dir = root_dir.replace(orig_project_name, extended_project_name
 
 wandb_api = wandb.Api()
 				
-## Find the best performing run for a given sweep set directory
-## using the mAP50 value from the wandb API sweep 
+## Find the best performing run for each sweep set (e.g. real-only-20), using the mAP50 value from wandb API 
 runs_to_extend = []
 for sweep_name_dir in glob.glob(os.path.join(root_dir, '*/')):
-	# there can be multiple restarted sweeps with the same name, e.g: diffusion-only-10
+	# there can be multiple restarted sweeps with the same name, but sweep IDs are unique
 	sweep_ids = [x for x in os.listdir(sweep_name_dir) if x!='discarded']
 	if len(sweep_ids)!=1:
 		print(f"{len(sweep_ids)} sweeps found in {sweep_name_dir}, unsure which to use, so skipping")
 		continue
+
 	sweep_id = sweep_ids[0]
 	sweep_dir = os.path.join(sweep_name_dir, sweep_id)
 
 	sweep = wandb_api.sweep(wandb_prefix + sweep_id)
 	best_run = sorted(sweep.runs, key=lambda run: run.summary.get("mAP50", 0), reverse=True)[0]
 
-	full_run_name = os.path.join(extended_project_dir, best_run.sweep.name, best_run.sweep.id, best_run.name+'_extended')
-	if os.path.exists(full_run_name):
-		val_results_path = os.path.join(extended_project_dir, best_run.sweep.name, best_run.sweep.id, 'val_'+best_run.name+'_extended', 'simple_evaluation_results.yaml')
+	ext_run_name = best_run.sweep.name + '__' + best_run.sweep.id + '__' + best_run.name
+	ext_run_path = os.path.join(extended_project_dir, ext_run_name)
+	if os.path.exists(ext_run_path):
+		val_results_path = os.path.join(extended_project_dir, 'val_' + ext_run_name, 'simple_evaluation_results.yaml')
 		assert os.path.exists(val_results_path), f"Extended run dir found but evaluation results missing: {val_results_path}"
 			
-		print(f"Extended run {full_run_name} already exists, skipping.")
+		print(f"Extended run {ext_run_path} already exists, skipping.")
 		continue
 
 	mAP50 = best_run.summary.get("mAP50", None)
 	if mAP50 is None:
 		print(f"mAP50 not found for only run {best_run.name} in sweep {sweep_id}")
 		continue
+	
 	print(f"Best run found to extend in {sweep_name_dir}: {best_run.name} with mAP50={mAP50}")
-	print(f"\t succesfully checked that {full_run_name} didn't exist")
+	print(f"\t succesfully checked that {ext_run_path} didn't exist")
 
 	args = yaml.safe_load(open(os.path.join(sweep_dir, best_run.name, 'args.yaml')))
 	args['epochs'] = 50
@@ -56,6 +58,7 @@ for sweep_name_dir in glob.glob(os.path.join(root_dir, '*/')):
 	# args['epochs'] = 2
 	# args['fraction'] = 0.001	
 	runs_to_extend.append((best_run, args))
+
 
 for run, args in runs_to_extend:
 	print(f"\n\nNow working on extending run {args['name']}; being saved to {args['save_dir']}")
