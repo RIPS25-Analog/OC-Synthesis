@@ -1,8 +1,11 @@
 # Setup instructions:
 
 ```
+git clone --recursive https://github.com/RIPS25-Analog/RIPS25-AnalogDevices-ObjectDetection.git ## clone recursively to also fetch submodules
+
 python -m venv env
 source env/bin/activate
+
 pip install ultralytics, wandb
 wandb login  # put API key
 ```
@@ -65,11 +68,11 @@ Cut-n-Paste and Diffusion require a folder with images of foreground objects and
 
 # Running scripts
 
-To finetune YOLO on a specific data file: 
+To finetune YOLO on a specific data config file (in YOLO format): 
 
 ``` python src/finetune_YOLO.py --data data/openimages-basic-v0.yaml --epochs 300 --freeze 23 ```
 
-To evaluate a particular YOLO finetuning run: 
+To evaluate a particular YOLO finetuning run:
 
 ``` python src/evaluate_YOLO.py --run runs/openimages-basic-v0/train2 ```
 
