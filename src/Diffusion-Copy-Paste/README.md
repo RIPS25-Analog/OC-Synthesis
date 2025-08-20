@@ -24,13 +24,6 @@ pip install -r requirements.txt
 pip install onnxruntime-gpu
 ```
 
-Also install the following libraries:
-```
-pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu129
-pip install --upgrade pip
-pip install onnxruntime-gpu
-```
-
 Next, clone the ComfyUI repository into your home folder (https://github.com/comfyanonymous/ComfyUI):
 
 ```
@@ -57,7 +50,7 @@ mv models/clip_vision/model.safetensors models/clip_vision/CLIP-ViT-H-14-laion2B
 rm -rf models/clip_vision/models/
 ```
 
-IPAdapter (save as ``models/ipadapter/ip-adapter_sdxl_vit-h.bin``):
+IP-Adapter (save as ``models/ipadapter/ip-adapter_sdxl_vit-h.bin``):
 ```
 mkdir models/ipadapter
 hf download h94/IP-Adapter sdxl_models/ip-adapter_sdxl_vit-h.bin --local-dir models/ipadapter
@@ -86,14 +79,15 @@ git clone https://github.com/Layer-norm/comfyui-lama-remover.git custom_nodes/co
 ```
 
 
-## Setting up Defaults
-The defaults.py file allows selection of a set of target classes that will be annotated in the final output (all other classes will be treated as distractors). It also contains different image generating parameters that might be varied to produce scenes with different levels of clutter, occlusion, data augmentation etc.
+## Setting up defaults
+The defaults.py file allows selection of a set of target classes that will be annotated in the final output (all other classes will be treated as distractors). It also contains different image generation parameters that can be varied to produce scenes with different target object sizes, clutter/occlusion levels, etc.
 
 ## Running the Script
 ```
-usage: diffusion_generator.py [-h] --root ROOT 
-                                   --background_images BACKGROUND_IMAGES
-                                   --output_dir OUTPUT_DIR 
+usage: diffusion_generator.py [-h]
+                              --root ROOT 
+                              --background_images BACKGROUND_IMAGES
+                              --output_dir OUTPUT_DIR 
                               [--pos_prompts POS_PROMPTS] [--neg_prompts NEG_PROMPTS] [--seed SEED] [--steps STEPS] 
                               [--max_obj_images MAX_OBJ_IMAGES] [--num_foregrounds NUM_FOREGROUNDS] [--num_backgrounds NUM_BACKGROUNDS] [--num_seeds NUM_SEEDS] 
                               [--selected] [--no_scale] [--no_rotation] [--allow_full_occlusion] [--no_distractors] [--dont_parallelize]
