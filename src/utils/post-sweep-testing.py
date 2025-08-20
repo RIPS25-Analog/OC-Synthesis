@@ -6,15 +6,17 @@ from finetune_YOLO import YOLOFinetuner
 from evaluate_YOLO import YOLOEvaluator
 
 wandb_prefix = 'vikhyat-3-org/pace-v2/'
-root_dir = '/home/wandb-runs/pace-v2/'
+wandb_runs_dir='/home/wandb-runs/'
 orig_project_name, extended_project_name = 'pace-v2', 'pace-v2-extended'
-extended_project_dir = root_dir.replace(orig_project_name, extended_project_name)
+
+project_dir = f'{wandb_runs_dir}/{orig_project_name}/'
+extended_project_dir = project_dir.replace(orig_project_name, extended_project_name)
 
 wandb_api = wandb.Api()
 				
 ## Find the best performing run for each sweep set (e.g. real-only-20), using the mAP50 value from wandb API 
 runs_to_extend = []
-for sweep_name_dir in glob.glob(os.path.join(root_dir, '*/')):
+for sweep_name_dir in glob.glob(os.path.join(project_dir, '*/')):
 	# there can be multiple restarted sweeps with the same name, but sweep IDs are unique
 	sweep_ids = [x for x in os.listdir(sweep_name_dir) if x!='discarded']
 	if len(sweep_ids)!=1:
@@ -50,7 +52,7 @@ for sweep_name_dir in glob.glob(os.path.join(root_dir, '*/')):
 	args['data'] = args['data'].replace('pace-v2-val.yaml', 'pace_v2.yaml')
 	args['name'] = best_run.sweep.name + '__' + best_run.sweep.id + '__' + best_run.name
 	args['project'] = extended_project_name
-	args['save_dir'] = os.path.join('/home/wandb-runs/') #, extended_project_name, best_run.sweep.name, best_run.sweep.id)
+	args['save_dir'] = os.path.join(wandb_runs_dir) #, extended_project_name, best_run.sweep.name, best_run.sweep.id)
 	args['val'] = True
 	print(f"\t Save Dir: {args['save_dir']}")
 
@@ -59,13 +61,12 @@ for sweep_name_dir in glob.glob(os.path.join(root_dir, '*/')):
 	# args['fraction'] = 0.001	
 	runs_to_extend.append((best_run, args))
 
-
+## Run extended finetuning on the best run per sweep (found above)
 for run, args in runs_to_extend:
 	print(f"\n\nNow working on extending run {args['name']}; being saved to {args['save_dir']}")
 	yolo_finetuner = YOLOFinetuner(**args)
 	results_train = yolo_finetuner.train_model()
 
-	run_name = run
 	eval_imgsz = run.config['eval_imgsz']
 	evaluator_args = {
 		'run': str(results_train.save_dir),
@@ -73,7 +74,7 @@ for run, args in runs_to_extend:
 		'imgsz': eval_imgsz,
 		'project': args['project'],
 		'split': 'test',  # Evaluate on the final test set
-		'name': 'val_'+args['name'],
+		'name': 'val_' + args['name'],
 		'save_dir': args['save_dir']
 	}
 

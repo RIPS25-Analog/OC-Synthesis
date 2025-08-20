@@ -106,20 +106,20 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run hyperparameter optimization for YOLO model.', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--model', type=str, default='yolo11n.pt', help='Path to the YOLO model file.')
     parser.add_argument('--parent_sweep_name_dir', type=str, default=None, help='Start model training from the best model found in a given sweep directory.')
-    parser.add_argument('--data', type=str, required=True, help='Path to the dataset configuration file.')
+    parser.add_argument('--data', type=str, required=True, help='Path to the dataset YAML config file.')
     parser.add_argument('--fraction', type=float, default=100, help='Fraction of the dataset to use for training.')
     parser.add_argument('--workers', type=int, default=16, help='Number of workers for data loading.')
     
     # parser.add_argument('--epochs', type=int, default=20, help='Number of epochs for training in each hyperparameter run.')
     parser.add_argument('--sweep_count', type=int, default=50, help='Number of hyperparameter combinations to try.')
-    parser.add_argument('--project', type=str, default='{dataset_name}', help='WandB project name for hyperparameter optimization.')
+    parser.add_argument('--project', type=str, default='{data_config_name}', help='WandB project name for hyperparameter optimization.')
     parser.add_argument('--sweep_name', type=str, default=None, help='Name of the WandB sweep.')
     args = parser.parse_args()
     
     # Validate required arguments
     assert os.path.exists(args.data), f"Data configuration file not found: {args.data}"
 
-    if args.project == '{dataset_name}':
+    if args.project == '{data_config_name}':
         args.project = f'{args.data.split("/")[-1].split(".")[0]}'
 
     if args.parent_sweep_name_dir is not None:
