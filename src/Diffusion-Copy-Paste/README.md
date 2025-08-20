@@ -16,15 +16,12 @@ This method requires a folder with images of foreground objects and a mask for e
 ```
 
 ## Installation 
-Navigate to your home folder and clone the following repository:
 
+Navigate to ``src/Diffusion-Copy-Paste`` in this repository and install the requirements:
 ```
-git clone https://github.com/RIPS25-Analog/RIPS25-AnalogDevices-ObjectDetection.git
-```
-
-Navigate to ``src/Diffusion_CP`` in this repository and install the requirements:
-```
+pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu129
 pip install -r requirements.txt
+pip install onnxruntime-gpu
 ```
 
 Also install the following libraries:
@@ -40,7 +37,7 @@ Next, clone the ComfyUI repository into your home folder (https://github.com/com
 git clone https://github.com/comfyanonymous/ComfyUI.git
 ```
 
-Using the Hugging Face CLI (https://huggingface.co/docs/huggingface_hub/en/guides/cli) or otherwise, download the following models into the indicated folders (within ~/ComfyUI):
+Using the Hugging Face CLI (https://huggingface.co/docs/huggingface_hub/en/guides/cli) or otherwise, download the following models into the indicated folders (within ``~/ComfyUI``):
 
 Controlnet (save as ``models/controlnet/diffusion_pytorch_model_promax.safetensors``):
 ```
