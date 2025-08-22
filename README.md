@@ -3,6 +3,7 @@
 ```
 git clone --recursive https://github.com/RIPS25-Analog/RIPS25-AnalogDevices-ObjectDetection.git ## clone recursively to also fetch submodules
 
+cd RIPS25-AnalogDevices-ObjectDetection
 python -m venv env
 source env/bin/activate
 
