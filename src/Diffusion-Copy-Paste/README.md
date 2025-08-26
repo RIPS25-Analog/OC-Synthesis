@@ -58,7 +58,7 @@ mv models/ipadapter/sdxl_models/ip-adapter_sdxl_vit-h.bin models/ipadapter/
 rm -rf models/ipadapter/sdxl_models
 ```
 
-LaMa Remover (save as ``custom_nodes/comfyui_lama_remover/ckpts/big-lama.pt``):
+LaMa Remover (save as ``custom_nodes/comfyui_lama_remover/ckpts/big-lama.pt``): # TODO: This block must come after the git clone commands
 ```
 wget -P custom_nodes/comfyui_lama_remover/ckpts https://github.com/Sanster/models/releases/download/add_big_lama/big-lama.pt
 ```
