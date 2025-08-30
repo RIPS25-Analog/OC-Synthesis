@@ -65,4 +65,22 @@
 ## TESTING NEW AUTO-SEQUENTIAL FEATURE
 # python src/hyperparam_opt_YOLO.py --sweep_count 25 --data /home/data/configs/pace_v2.yaml --project pace-v2 --sweep_name test-diffusion_100-seq-pace_100 --parent_sweep_name_dir /home/wandb-runs/pace-v2-extended/diffusion-only-100/
 
-python src/post-sweep-testing.py 
+# python src/post-sweep-testing.py 
+
+#### PACE V3
+# python src/Cut-and-Paste/dataset_generator.py --n_images 20000 /home/data/pace/pace_v3-foreground_objects/ /home/data/processed/cnp-pace/pace_v3
+
+python src/finetune_YOLO.py --data /home/data/configs/pace_v3.yaml --epochs 50 --freeze 20 --lr0 0.0003 --fraction 10 --name real-only-10 --project pace-v3
+python src/finetune_YOLO.py --data /home/data/configs/pace_v3.yaml --epochs 50 --freeze 20 --lr0 0.0003 --fraction 20 --name real-only-20 --project pace-v3
+python src/finetune_YOLO.py --data /home/data/configs/pace_v3.yaml --epochs 50 --freeze 20 --lr0 0.0003 --fraction 50 --name real-only-50 --project pace-v3
+python src/finetune_YOLO.py --data /home/data/configs/pace_v3.yaml --epochs 50 --freeze 20 --lr0 0.0003 --fraction 100 --name real-only-100 --project pace-v3
+
+python src/finetune_YOLO.py --data /home/data/configs/3d_CopyPaste_v3.yaml --epochs 50 --freeze 20 --lr0 0.0003 --fraction 10 --name 3D-CopyPaste-10 --project pace-v3
+python src/finetune_YOLO.py --data /home/data/configs/3d_CopyPaste_v3.yaml --epochs 50 --freeze 20 --lr0 0.0003 --fraction 20 --name 3D-CopyPaste-20 --project pace-v3
+python src/finetune_YOLO.py --data /home/data/configs/3d_CopyPaste_v3.yaml --epochs 50 --freeze 20 --lr0 0.0003 --fraction 50 --name 3D-CopyPaste-50 --project pace-v3
+python src/finetune_YOLO.py --data /home/data/configs/3d_CopyPaste_v3.yaml --epochs 50 --freeze 20 --lr0 0.0003 --fraction 100 --name 3D-CopyPaste-100 --project pace-v3
+
+python src/finetune_YOLO.py --data /home/data/configs/3d_RP_v3.yaml --epochs 50 --freeze 20 --lr0 0.0003 --fraction 10 --name 3D-RP-10 --project pace-v3
+python src/finetune_YOLO.py --data /home/data/configs/3d_RP_v3.yaml --epochs 50 --freeze 20 --lr0 0.0003 --fraction 20 --name 3D-RP-20 --project pace-v3
+python src/finetune_YOLO.py --data /home/data/configs/3d_RP_v3.yaml --epochs 50 --freeze 20 --lr0 0.0003 --fraction 50 --name 3D-RP-50 --project pace-v3
+python src/finetune_YOLO.py --data /home/data/configs/3d_RP_v3.yaml --epochs 50 --freeze 20 --lr0 0.0003 --fraction 100 --name 3D-RP-100 --project pace-v3

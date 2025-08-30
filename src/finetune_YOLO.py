@@ -6,7 +6,7 @@ from ultralytics.utils.files import WorkingDirectory
 import argparse
 from ultralytics import settings
 
-wandb_prefix = 'vikhyat-3-org/pace-v2/'
+wandb_prefix = 'vikhyat-3-org/pace-v3/'
 
 class YOLOFinetuner:
     def __init__(self, **kwargs):
@@ -113,8 +113,11 @@ if __name__ == "__main__":
         sweep = wandb_api.sweep(wandb_prefix + sweep_id)
         best_run = sorted(sweep.runs, key=lambda run: run.summary.get("mAP50", 0), reverse=True)[0]
         args.model = os.path.join(sweep_name_dir, sweep_id, best_run.name + '_extended', 'weights', 'best.pt')
-        del args.parent_sweep_name_dir
+        
+    del args.parent_sweep_name_dir
 
+    args.fraction /= 100 # Convert percentage to fraction for YOLO
+    
     # Convert args into dictionary
     train_kwargs = vars(args)
     finetuner = YOLOFinetuner(**train_kwargs)
