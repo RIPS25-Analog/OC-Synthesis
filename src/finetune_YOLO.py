@@ -47,6 +47,9 @@ class YOLOFinetuner:
             self.save_dir = os.path.join('/home/wandb-runs') # project_name/run_name gets added automatically
         os.makedirs(self.save_dir, exist_ok=True)
 
+        if 'val' in kwargs:
+            kwargs['val'] = True if kwargs['val']==True else False
+        
         self.train_params = kwargs
         
     def train_model(self):
