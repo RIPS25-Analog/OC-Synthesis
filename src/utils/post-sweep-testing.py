@@ -39,9 +39,9 @@ if __name__ == '__main__':
 
 		full_name = best_run.name
 		eval_run_name = 'test_' + full_name
-		eval_run_path = os.path.join(project_dir, eval_run_name)
+		eval_run_path = os.path.join(sweep_dir, eval_run_name)
 		if os.path.exists(eval_run_path):
-			val_results_path = os.path.join(project_dir, eval_run_name, 'simple_evaluation_results.yaml')
+			val_results_path = os.path.join(sweep_dir, eval_run_name, 'simple_evaluation_results.yaml')
 			assert os.path.exists(val_results_path), f"Eval run dir found but evaluation results missing: {val_results_path}"
 
 			print(f"Eval run {eval_run_path} already exists, skipping.")
@@ -55,24 +55,24 @@ if __name__ == '__main__':
 		print(f"Best run found to evaluate in {sweep_name_dir}: {best_run.name} with mAP50={mAP50}")
 		print(f"\t succesfully checked that {eval_run_path} didn't exist")
 
-		args = yaml.safe_load(open(os.path.join(sweep_dir, best_run.name, 'args.yaml')))
-		args['name'] = full_name
-		# args['save_dir'] = os.path.join(wandb_runs_dir) #, extended_project_name, best_run.sweep.name, best_run.sweep.id)
-		print(f"\t Save Dir: {args['save_dir']}")
+		train_args = yaml.safe_load(open(os.path.join(sweep_dir, best_run.name, 'args.yaml')))
+		train_args['name'] = full_name
+		# train_args['save_dir'] = os.path.join(wandb_runs_dir) #, extended_project_name, best_run.sweep.name, best_run.sweep.id)
+		print(f"\t Save Dir: {train_args['save_dir']}")
 
-		runs_to_evaluate.append((best_run, args))
+		runs_to_evaluate.append((best_run, train_args))
 
 	## Run extended finetuning on the best run per sweep (found above)
-	for run, args in runs_to_evaluate:
-		print(f"\n\nNow evaluating run {args['name']}; being saved to {args['save_dir']}")
+	for run, train_args in runs_to_evaluate:
+		print(f"\n\nNow evaluating run {train_args['name']}; being saved to {train_args['save_dir']}")
 		evaluator_args = {
-			'run': str(args['save_dir']),
+			'run': str(train_args['save_dir']),
 			'batch': 32,
-			'imgsz': args['imgsz'],
-			'project': args['project'],
+			'imgsz': train_args['imgsz'],
+			'project': train_args['project'],
 			'split': 'test',  # Evaluate on the final test set
-			'name': 'test_' + args['name'],
-			'save_dir': args['save_dir']
+			'name': 'test_' + train_args['name'],
+			'save_dir': train_args['save_dir']
 		}
 
 		evaluator = YOLOEvaluator(**evaluator_args)
