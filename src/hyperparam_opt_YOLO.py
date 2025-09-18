@@ -57,7 +57,7 @@ def run_hyperparameter_optimization(project, data, model, sweep_count=50, sweep_
 
             'lr0': {'values': [1e-4,1e-3]},
             'imgsz': {'values': [640, 960, 1280]},
-            'freeze': {'values': ([16, 19, 22] if 'world' in model else [17, 20, 23])}#{'distribution': 'int_uniform', 'min': 10, 'max': 20},
+            'freeze': {'values': [17, 20]}#{'distribution': 'int_uniform', 'min': 10, 'max': 20},
         }
     }
     

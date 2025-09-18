@@ -34,9 +34,14 @@ if __name__ == '__main__':
 		sweep_id = sweep_ids[0]
 		sweep_dir = os.path.join(sweep_name_dir, sweep_id)
 
-		sweep = wandb_api.sweep(f'{wandb_prefix}/{args.project}/{sweep_id}')
-		best_run = sorted(sweep.runs, key=lambda run: run.summary.get("mAP50", 0), reverse=True)[0]
-
+		print(f"Searching WandB for sweep {wandb_prefix}/{args.project}/{sweep_id} with name {sweep_name_dir}")
+		try:
+			sweep = wandb_api.sweep(f'{wandb_prefix}/{args.project}/{sweep_id}')
+			best_run = sorted(sweep.runs, key=lambda run: run.summary.get("mAP50", 0), reverse=True)[0]
+		except Exception as e:
+			print(f"Error when searching for sweep {wandb_prefix}/{args.project}/{sweep_id} in WandB, skipping. Error: {e}")
+			continue
+		
 		full_name = best_run.name
 		eval_run_name = 'test_' + full_name
 		eval_run_path = os.path.join(sweep_dir, eval_run_name)

@@ -1,7 +1,7 @@
 import os
 import yaml
 import argparse
-from ultralytics import YOLO, YOLOWorld
+from ultralytics import YOLO
 from ultralytics.utils.files import WorkingDirectory
 
 class YOLOEvaluator:
@@ -16,32 +16,15 @@ class YOLOEvaluator:
             self.model_path = kwargs.get('model')
             assert kwargs.get('data', None) is not None, "If a model is provided, data must also be specified."
         
-        if 'world' in self.model_path:
-            self.model = YOLOWorld(self.model_path)
+        self.model = YOLO(self.model_path, task='detect')
 
-            with open(kwargs['data'], 'r') as f:
-                data = yaml.safe_load(f.read())
-            data_names = data.get('names', None)
-            if isinstance(data_names, list):
-                self.class_names = [x.replace('_',' ') for x in data_names]
-            elif isinstance(data_names, dict):
-                self.class_names = [data_names[i].replace('_',' ') for i in sorted(data_names.keys())]
-            else:
-                raise ValueError("Invalid 'names' format in data config.")
-            print('Using class names:', self.class_names)
-            self.model.set_classes(self.class_names)
-        else:
-            self.model = YOLO(self.model_path, task='detect')
-
-        if ('project' not in kwargs) and ('save_dir' not in kwargs):
-            self.save_dir = os.path.join('/home/wandb-runs', kwargs['data'].split('/')[-1].split('.')[0])
-        
-        if 'save_dir' in kwargs:
-            self.save_dir = kwargs['save_dir']
-            del kwargs['save_dir']  # Remove save_dir from kwargs to avoid passing it to YOLO
+        if ('run' in kwargs):
+            self.save_dir = kwargs.get('run')
         else:
             self.save_dir = os.path.join('/home/wandb-runs', kwargs.get('project', 'yolo_finetune'))
+        kwargs['project'] = self.save_dir
         os.makedirs(self.save_dir, exist_ok=True)
+        print(f'Saving evaluation results to {self.save_dir}')
 
         if 'run' in kwargs: del kwargs['run']
         if 'model' in kwargs: del kwargs['model']
@@ -62,6 +45,7 @@ class YOLOEvaluator:
     def evaluate_model(self):
         """Evaluate the YOLO model and return results."""
         print(f"Evaluating on dataset: {self.val_params.get('data')} with split: {self.val_params.get('split')}")
+        print(f"All validation parameters: {self.val_params}")
         with WorkingDirectory(self.save_dir):
             results = self.model.val(**self.val_params)
         
@@ -97,7 +81,7 @@ if __name__ == "__main__":
     parser.add_argument('--run', type=str, default='yolo11n.pt', help='Path to the YOLO run directory (to fetch best weights from).')
     parser.add_argument('--batch', type=int, default=32, help='Batch size for evaluation.')
     parser.add_argument('--imgsz', type=int, default=640, help='Image size for evaluation.')
-    parser.add_argument('--project', type=str, default=None, help='Project name for saving evaluation results.')
+    parser.add_argument('--project', type=str, default=None, help='Project name for saving evaluation results (only used if --run is missing).')
     
     parser.add_argument('--data', type=str, required=False, help='Path to the dataset configuration file (YAML). (Optional, will be fetched from the run YAML if not provided).')
     parser.add_argument('--split', type=str, default='val', choices=['train', 'val', 'test'], help='Specify the dataset split to evaluate on.')
@@ -106,7 +90,12 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    args.classes = list(map(int, args.classes.split(','))) if args.classes else None
+    if args.classes:
+        args.classes = list(map(int, args.classes.split(',')))
+    else:
+        del args.classes
+    if args.project is None:
+        del args.project
 
     val_kwargs = vars(args)
     evaluator = YOLOEvaluator(**val_kwargs)

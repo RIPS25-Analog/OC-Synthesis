@@ -6,7 +6,7 @@ git clone --recursive https://github.com/RIPS25-Analog/RIPS25-AnalogDevices-Obje
 python -m venv env
 source env/bin/activate
 
-pip install ultralytics, wandb
+pip install ultralytics wandb
 wandb login  # put API key
 ```
 

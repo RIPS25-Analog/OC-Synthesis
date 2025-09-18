@@ -1,7 +1,7 @@
 import os
 import wandb
 import yaml
-from ultralytics import YOLO, YOLOWorld
+from ultralytics import YOLO
 from ultralytics.utils.files import WorkingDirectory
 import argparse
 from ultralytics import settings
@@ -11,22 +11,7 @@ wandb_prefix = 'vikhyat-3-org/pace-v3/'
 class YOLOFinetuner:
     def __init__(self, **kwargs):
         model_name = kwargs.get('model', 'yolo11n.pt')
-        if 'world' in model_name:
-            self.model = YOLOWorld(model_name)
-
-            with open(kwargs['data'], 'r') as f:
-                data = yaml.safe_load(f.read())
-            data_names = data.get('names', None)
-            if isinstance(data_names, list):
-                self.class_names = [x.replace('_',' ') for x in data_names]
-            elif isinstance(data_names, dict):
-                self.class_names = [data_names[i].replace('_',' ') for i in sorted(data_names.keys())]
-            else:
-                raise ValueError("Invalid 'names' format in data config.")
-            print('Using class names:', self.class_names)
-            self.model.set_classes(self.class_names)
-        else:
-            self.model = YOLO(model_name, task='detect')
+        self.model = YOLO(model_name, task='detect')
         print(self.model.info())
 
         self.data = kwargs.get('data')
@@ -68,8 +53,8 @@ if __name__ == "__main__":
 
     parser.add_argument('--workers', type=int, default=16, help='Number of workers for data loading.')
     parser.add_argument('--no_wandb', action='store_true', help='Disable Weights & Biases logging.')
-    parser.add_argument('--val', type=bool, default=True, help='Enable validation during training.')
-    parser.add_argument('--fraction', type=float, default=1.0, help='Fraction of the dataset to use for training.')
+    parser.add_argument('--val', action='store_true', help='Enable validation during training.')
+    parser.add_argument('--fraction', type=float, default=100, help='Fraction of the dataset to use for training.')
     
     parser.add_argument('--epochs', type=int, default=100, help='Number of training epochs.')
     parser.add_argument('--batch', type=int, default=32, help='Batch size.')
