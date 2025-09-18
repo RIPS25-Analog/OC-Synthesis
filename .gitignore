@@ -40,7 +40,7 @@ __MACOSX/
 Objaverse_data/
 Objaverse_data_resized/
 
-# sunrgbd_trainval/
+sunrgbd_trainval/
 src/Cut-and-Paste/*/
 !Cut-and-Paste/pb/
 
@@ -49,6 +49,8 @@ organized_yolo_datasett/
 organized_yolo_dataset_1/
 wandb/
 annotation_quality_check/
+Pace/
+YOLO11/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -244,3 +246,6 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+
+SUNRGBD/

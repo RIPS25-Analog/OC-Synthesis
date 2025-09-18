@@ -50,9 +50,9 @@ if __name__ == "__main__":
     parser.add_argument('--close_mosaic', type=int, default=10, help='Close mosaic augmentation N epochs before training ends.')
     parser.add_argument('--eval_imgsz', type=int, default=640, help='Image size for evaluation.')
     parser.add_argument('--name', type=str, default=None, help='Name of the training run.')
-
+    parser.add_argument('--classes', type=str, default=None, help='Comma-separated list of class names to evaluate (default: None, evaluates all classes).')
     args = parser.parse_args()
-
+    args.classes = list(map(int, args.classes.split(','))) if args.classes else None
     if args.no_wandb:
         print("Intra-run Weights & Biases logging is disabled.")
         settings.update({"wandb": False}) # enable WandB for standalone finetuning (not sweeps)

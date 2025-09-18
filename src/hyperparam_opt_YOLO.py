@@ -47,7 +47,7 @@ def train_with_wandb(config=None):
         wandb.init(reinit=True, config=config)
         wandb.log(metrics_to_log)
 
-def run_hyperparameter_optimization(project_name, data, model, sweep_count=50, epochs=20, sweep_name='yolo_hyperparam_opt'):
+def run_hyperparameter_optimization(project_name, data, model, sweep_count=50, epochs=20, sweep_name='yolo_hyperparam_opt', classes=None):
     global sweep_id
     """Run hyperparameter optimization using WandB sweeps."""
     
@@ -94,6 +94,8 @@ def run_hyperparameter_optimization(project_name, data, model, sweep_count=50, e
     sweep_config['parameters']['data'] = {'value': data}
     sweep_config['parameters']['model'] = {'value': model}
     sweep_config['parameters']['epochs'] = {'value': epochs}  # Fixed number of epochs for all runs
+    if classes is not None:
+        sweep_config['parameters']['classes'] = {'value': classes}  
 
     # Initialize the sweep
     sweep_id = wandb.sweep(sweep_config, project=project_name)
@@ -115,8 +117,9 @@ if __name__ == "__main__":
     parser.add_argument('--epochs', type=int, default=20, help='Number of epochs for training in each hyperparameter run.')
     parser.add_argument('--workers', type=int, default=8, help='Number of workers for data loading.')
     parser.add_argument('--sweep_name', type=str, default=None, help='Name of the WandB sweep.')
+    parser.add_argument('--classes', type=str, default=None, help='Comma-separated list of class names to evaluate (default: None, evaluates all classes).')
     args = parser.parse_args()
-    
+    args.classes = list(map(int, args.classes.split(','))) if args.classes else None
     # Validate required arguments
     assert os.path.exists(args.data), f"Data configuration file not found: {args.data}"
 
@@ -130,5 +133,6 @@ if __name__ == "__main__":
         model=args.model,
         sweep_count=args.sweep_count,
         epochs=args.epochs,
-        sweep_name=args.sweep_name
+        sweep_name=args.sweep_name,
+        classes=args.classes
     )
