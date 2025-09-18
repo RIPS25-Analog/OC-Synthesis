@@ -6,7 +6,6 @@ from finetune_YOLO import YOLOFinetuner
 from evaluate_YOLO import YOLOEvaluator
 
 runs_save_dir = '/home/wandb-runs'
-wandb_prefix = 'vikhyat-3-org/pace-v2/'
 
 def train_with_wandb(config=None):
     """Training function to be called by WandB sweep agent."""
@@ -22,7 +21,7 @@ def train_with_wandb(config=None):
         evaluator_args = {
             'run': str(results_train.save_dir),
             'batch': config.get('batch', 32),
-            'imgsz': config.get('eval_imgsz', 640),
+            'imgsz': config.get('imgsz', 640),
             'project': local_project_name,
             'split': 'val'  # Assuming we want to evaluate on the validation set
         }
@@ -40,42 +39,24 @@ def train_with_wandb(config=None):
         wandb.init(reinit=True, config=config)
         wandb.log(metrics_to_log)
 
-def run_hyperparameter_optimization(project, data, model, sweep_count=50, epochs=20, sweep_name='yolo_hyperparam_opt', data_fraction=1.0, workers=16):
+def run_hyperparameter_optimization(project, data, model, sweep_count=50, sweep_name='yolo_hyperparam_opt', data_fraction=1.0, workers=16):
     global sweep_id
     """Run hyperparameter optimization using WandB sweeps."""
     
     # Create sweep configuration
     sweep_config = {
-        'method': 'bayes',  # Can be 'grid', 'random', or 'bayes'
+        'method': 'grid',  # Can be 'grid', 'random', or 'bayes'
         'metric': {'name': 'mAP50', 'goal': 'maximize'},
         'parameters': {
             'optimizer': {'values': ['Adam']},
-            # Learning rate parameters
-            'lr0': {'distribution': 'log_uniform_values', 'min': 3e-5, 'max': 3e-3},
-            # 'lrf': {'distribution': 'uniform', 'min': 0.001, 'max': 0.1},
-            # 'momentum': {'distribution': 'uniform', 'min': 0.85, 'max': 0.95},
-            # 'weight_decay': {'distribution': 'log_uniform_values', 'min': 0.0001, 'max': 0.001},
-
-            # # Warmup parameters
-            # 'warmup_epochs': {'distribution': 'uniform', 'min': 1.0, 'max': 5.0},
-            # 'warmup_momentum': {'distribution': 'uniform', 'min': 0.5, 'max': 0.9},
-            # 'warmup_bias_lr': {'distribution': 'uniform', 'min': 0.05, 'max': 0.2},
-
-            # # Loss function weights
-            # 'box': {'distribution': 'uniform', 'min': 1.0, 'max': 20.0},
-            # 'cls': {'distribution': 'uniform', 'min': 0.05, 'max': 2.0},
-            # 'dfl': {'distribution': 'uniform', 'min': 0.1, 'max': 5.0},
-            
             'close_mosaic': {'values': [5]},  # Close mosaic augmentation N epochs before training ends
-            # Training parameters
             'batch': {'values': [32]},
-            'imgsz': {'values': [480, 640, 800, 960]},
-            'eval_imgsz': {'values': [480, 640, 800, 960]},
-            'multi_scale': {'values': [0, 1]}, # making numeric for ease of plotting in WandB
-            'epochs': {'values': [5, 10, 20]},
-            
-            # Architecture parameters
-            'freeze': {'values': ([16, 19, 22] if 'world' in model else [17, 20, 23])}#{'distribution': 'int_uniform', 'min': 10, 'max': 20},
+            'multi_scale': {'values': [0]}, # making numeric for ease of plotting in WandB
+            'epochs': {'values': [25]},
+
+            'lr0': {'values': [1e-4,1e-3]},
+            'imgsz': {'values': [640, 960, 1280]},
+            'freeze': {'values': [17, 20]}#{'distribution': 'int_uniform', 'min': 10, 'max': 20},
         }
     }
     
@@ -114,6 +95,8 @@ if __name__ == "__main__":
     parser.add_argument('--sweep_count', type=int, default=50, help='Number of hyperparameter combinations to try.')
     parser.add_argument('--project', type=str, default='{data_config_name}', help='WandB project name for hyperparameter optimization.')
     parser.add_argument('--sweep_name', type=str, default=None, help='Name of the WandB sweep.')
+    parser.add_argument('--wandb_username', type=str, default=None, help='WandB username (need when specifying parent_sweep_name_dir).')
+
     args = parser.parse_args()
     
     # Validate required arguments
@@ -123,6 +106,7 @@ if __name__ == "__main__":
         args.project = f'{args.data.split("/")[-1].split(".")[0]}'
 
     if args.parent_sweep_name_dir is not None:
+        assert args.wandb_username is not None, "Must specify wandb_username when using parent_sweep_name_dir"
         # Find best weights for best sweep in given sweep name directory
         sweep_name_dir = args.parent_sweep_name_dir
         sweep_ids = [x for x in os.listdir(sweep_name_dir) if x!='discarded']
@@ -130,13 +114,12 @@ if __name__ == "__main__":
         sweep_id = sweep_ids[0]
 
         wandb_api = wandb.Api()
-        sweep = wandb_api.sweep(wandb_prefix + sweep_id)
+        sweep = wandb_api.sweep(f'{args.wandb_username}/{args.project}/{sweep_id}')
         best_run = sorted(sweep.runs, key=lambda run: run.summary.get("mAP50", 0), reverse=True)[0]
-        args.model = os.path.join(sweep_name_dir, sweep_id, best_run.name + '_extended', 'weights', 'best.pt')
+        args.model = os.path.join(sweep_name_dir, sweep_id, best_run.name, 'weights', 'best.pt')
         assert os.path.exists(args.model), f"Best model not found: {args.model}"
         del args.parent_sweep_name_dir
 
-    args.fraction /= 100 # Convert percentage to fraction for YOLO
     project_name = args.project
     sweep_name = args.sweep_name
     settings.update({"wandb": True}) ## to make sure intra-sweep (epoch-wise) logging is enabled

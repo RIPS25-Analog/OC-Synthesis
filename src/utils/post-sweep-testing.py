@@ -1,85 +1,88 @@
 import os
+import argparse
 import glob
 import yaml
 import wandb
-from finetune_YOLO import YOLOFinetuner
+
+import sys
+sys.path.append('src')
+
 from evaluate_YOLO import YOLOEvaluator
 
-wandb_prefix = 'vikhyat-3-org/pace-v2/'
-wandb_runs_dir='/home/wandb-runs/'
-orig_project_name, extended_project_name = 'pace-v2', 'pace-v2-extended'
+if __name__ == '__main__':
+	parser = argparse.ArgumentParser(description='Run test-set evaluation on all runs within a project',
+									  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+	parser.add_argument('--project', type=str, required=True, help='Project name')
+	parser.add_argument('--wandb_username', type=str, required=True, help='WandB username')
+	args = parser.parse_args()
 
-project_dir = f'{wandb_runs_dir}/{orig_project_name}/'
-extended_project_dir = project_dir.replace(orig_project_name, extended_project_name)
+	wandb_prefix = args.wandb_username
+	wandb_runs_dir = '/home/wandb-runs'
 
-wandb_api = wandb.Api()
-				
-## Find the best performing run for each sweep set (e.g. real-only-20), using the mAP50 value from wandb API 
-runs_to_extend = []
-for sweep_name_dir in glob.glob(os.path.join(project_dir, '*/')):
-	# there can be multiple restarted sweeps with the same name, but sweep IDs are unique
-	sweep_ids = [x for x in os.listdir(sweep_name_dir) if x!='discarded']
-	if len(sweep_ids)!=1:
-		print(f"{len(sweep_ids)} sweeps found in {sweep_name_dir}, unsure which to use, so skipping")
-		continue
+	project_dir = f'{wandb_runs_dir}/{args.project}/'
+	wandb_api = wandb.Api()
+					
+	## Find the best performing run for each sweep set (e.g. real-only-20), using the mAP50 value from wandb API
+	runs_to_evaluate = []
+	print(f"Finding best runs to evaluate in {project_dir}")
+	for sweep_name_dir in glob.glob(os.path.join(project_dir, '*/')):
+		# there can be multiple restarted sweeps with the same name, but sweep IDs are unique
+		sweep_ids = [x for x in os.listdir(sweep_name_dir) if x!='discarded']
+		if len(sweep_ids)!=1:
+			print(f"{len(sweep_ids)} sweeps found in {sweep_name_dir}, unsure which to use, so skipping")
+			continue
 
-	sweep_id = sweep_ids[0]
-	sweep_dir = os.path.join(sweep_name_dir, sweep_id)
+		sweep_id = sweep_ids[0]
+		sweep_dir = os.path.join(sweep_name_dir, sweep_id)
 
-	sweep = wandb_api.sweep(wandb_prefix + sweep_id)
-	best_run = sorted(sweep.runs, key=lambda run: run.summary.get("mAP50", 0), reverse=True)[0]
+		print(f"Searching WandB for sweep {wandb_prefix}/{args.project}/{sweep_id} with name {sweep_name_dir}")
+		try:
+			sweep = wandb_api.sweep(f'{wandb_prefix}/{args.project}/{sweep_id}')
+			best_run = sorted(sweep.runs, key=lambda run: run.summary.get("mAP50", 0), reverse=True)[0]
+		except Exception as e:
+			print(f"Error when searching for sweep {wandb_prefix}/{args.project}/{sweep_id} in WandB, skipping. Error: {e}")
+			continue
+		
+		full_name = best_run.name
+		eval_run_name = 'test_' + full_name
+		eval_run_path = os.path.join(sweep_dir, eval_run_name)
+		if os.path.exists(eval_run_path):
+			val_results_path = os.path.join(sweep_dir, eval_run_name, 'simple_evaluation_results.yaml')
+			assert os.path.exists(val_results_path), f"Eval run dir found but evaluation results missing: {val_results_path}"
 
-	ext_run_name = best_run.sweep.name + '__' + best_run.sweep.id + '__' + best_run.name
-	ext_run_path = os.path.join(extended_project_dir, ext_run_name)
-	if os.path.exists(ext_run_path):
-		val_results_path = os.path.join(extended_project_dir, 'val_' + ext_run_name, 'simple_evaluation_results.yaml')
-		assert os.path.exists(val_results_path), f"Extended run dir found but evaluation results missing: {val_results_path}"
-			
-		print(f"Extended run {ext_run_path} already exists, skipping.")
-		continue
+			print(f"Eval run {eval_run_path} already exists, skipping.")
+			continue
 
-	mAP50 = best_run.summary.get("mAP50", None)
-	if mAP50 is None:
-		print(f"mAP50 not found for only run {best_run.name} in sweep {sweep_id}")
-		continue
-	
-	print(f"Best run found to extend in {sweep_name_dir}: {best_run.name} with mAP50={mAP50}")
-	print(f"\t succesfully checked that {ext_run_path} didn't exist")
+		mAP50 = best_run.summary.get("mAP50", None)
+		if mAP50 is None:
+			print(f"mAP50 not found for only run {best_run.name} in sweep {sweep_id}")
+			continue
+		
+		print(f"Best run found to evaluate in {sweep_name_dir}: {best_run.name} with mAP50={mAP50}")
+		print(f"\t succesfully checked that {eval_run_path} didn't exist")
 
-	args = yaml.safe_load(open(os.path.join(sweep_dir, best_run.name, 'args.yaml')))
-	args['epochs'] = 50
-	args['patience'] = 20
-	args['data'] = args['data'].replace('pace-v2-val.yaml', 'pace_v2.yaml')
-	args['name'] = best_run.sweep.name + '__' + best_run.sweep.id + '__' + best_run.name
-	args['project'] = extended_project_name
-	args['save_dir'] = os.path.join(wandb_runs_dir) #, extended_project_name, best_run.sweep.name, best_run.sweep.id)
-	args['val'] = True
-	print(f"\t Save Dir: {args['save_dir']}")
+		train_args = yaml.safe_load(open(os.path.join(sweep_dir, best_run.name, 'args.yaml')))
+		train_args['name'] = full_name
+		# train_args['save_dir'] = os.path.join(wandb_runs_dir) #, extended_project_name, best_run.sweep.name, best_run.sweep.id)
+		print(f"\t Save Dir: {train_args['save_dir']}")
 
-	# ############################### TEMP #######################################################################
-	# args['epochs'] = 2
-	# args['fraction'] = 0.001	
-	runs_to_extend.append((best_run, args))
+		runs_to_evaluate.append((best_run, train_args))
 
-## Run extended finetuning on the best run per sweep (found above)
-for run, args in runs_to_extend:
-	print(f"\n\nNow working on extending run {args['name']}; being saved to {args['save_dir']}")
-	yolo_finetuner = YOLOFinetuner(**args)
-	results_train = yolo_finetuner.train_model()
+	## Run extended finetuning on the best run per sweep (found above)
+	for run, train_args in runs_to_evaluate:
+		print(f"\n\nNow evaluating run {train_args['name']}; being saved to {train_args['save_dir']}")
+		evaluator_args = {
+			'run': str(train_args['save_dir']),
+			'batch': 32,
+			'imgsz': train_args['imgsz'],
+			'project': train_args['project'],
+			'split': 'test',  # Evaluate on the final test set
+			'name': 'test_' + train_args['name'],
+			'save_dir': train_args['save_dir']
+		}
 
-	eval_imgsz = run.config['eval_imgsz']
-	evaluator_args = {
-		'run': str(results_train.save_dir),
-		'batch': 32,
-		'imgsz': eval_imgsz,
-		'project': args['project'],
-		'split': 'test',  # Evaluate on the final test set
-		'name': 'val_' + args['name'],
-		'save_dir': args['save_dir']
-	}
+		evaluator = YOLOEvaluator(**evaluator_args)
+		val_results = evaluator.evaluate_model()
 
-	evaluator = YOLOEvaluator(**evaluator_args)
-	val_results = evaluator.evaluate_model()
-
-	print('Basic metrics:')
-	print(val_results.get('metrics'))
+		print('Basic metrics:')
+		print(val_results.get('metrics'))

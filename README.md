@@ -7,7 +7,7 @@ cd RIPS25-AnalogDevices-ObjectDetection
 python -m venv env
 source env/bin/activate
 
-pip install ultralytics, wandb
+pip install ultralytics wandb
 wandb login  # put API key
 ```
 
