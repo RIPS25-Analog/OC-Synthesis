@@ -1,11 +1,11 @@
 import os
 import yaml
 import argparse
-from ultralytics import YOLO
+from ultralytics import RTDETR
 from ultralytics.utils.files import WorkingDirectory
 
-wandb_runs_dir = '/home/wandb-runs'
-class YOLOEvaluator:
+wandb_runs_dir = '/home/va6hp/wandb-runs'
+class RTDETREvaluator:
     def __init__(self, **kwargs):
         if kwargs.get('model') is None:
             run_dir = kwargs.get('run', None)
@@ -17,15 +17,17 @@ class YOLOEvaluator:
             self.model_path = kwargs.get('model')
             assert kwargs.get('data', None) is not None, "If a model is provided, data must also be specified."
         
-        self.model = YOLO(self.model_path, task='detect')
+        # RT-DETR doesn't have a "world" variant, so we remove that logic
+        self.model = RTDETR(self.model_path)
 
-        if ('run' in kwargs):
-            self.save_dir = kwargs.get('run')
+        if ('project' not in kwargs) and ('save_dir' not in kwargs):
+            self.save_dir = run_dir
+        elif 'save_dir' in kwargs:
+            self.save_dir = kwargs['save_dir']
+            del kwargs['save_dir']  # Remove save_dir from kwargs to avoid passing it to RT-DETR
         else:
-            self.save_dir = os.path.join(wandb_runs_dir, kwargs.get('project', 'yolo_finetune'))
-        kwargs['project'] = self.save_dir
+            self.save_dir = os.path.join(wandb_runs_dir, kwargs.get('project', 'rtdetr_finetune'))
         os.makedirs(self.save_dir, exist_ok=True)
-        print(f'Saving evaluation results to {self.save_dir}')
 
         if 'run' in kwargs: del kwargs['run']
         if 'model' in kwargs: del kwargs['model']
@@ -44,9 +46,8 @@ class YOLOEvaluator:
         return data
 
     def evaluate_model(self):
-        """Evaluate the YOLO model and return results."""
+        """Evaluate the RT-DETR model and return results."""
         print(f"Evaluating on dataset: {self.val_params.get('data')} with split: {self.val_params.get('split')}")
-        print(f"All validation parameters: {self.val_params}")
         with WorkingDirectory(self.save_dir):
             results = self.model.val(**self.val_params)
         
@@ -77,28 +78,25 @@ class YOLOEvaluator:
         return result_dict
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Evaluate a YOLO model with specified parameters.',
+    parser = argparse.ArgumentParser(description='Evaluate an RT-DETR model with specified parameters.',
                                       formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--run', type=str, default='yolo11n.pt', help='Path to the YOLO run directory (to fetch best weights from).')
+    parser.add_argument('--run', type=str, default='rtdetr-l.pt', help='Path to the RT-DETR run directory (to fetch best weights from).')
     parser.add_argument('--batch', type=int, default=32, help='Batch size for evaluation.')
     parser.add_argument('--imgsz', type=int, default=640, help='Image size for evaluation.')
-    parser.add_argument('--project', type=str, default=None, help='Project name for saving evaluation results (only used if --run is missing).')
+    parser.add_argument('--project', type=str, default=None, help='Project name for saving evaluation results.')
     
     parser.add_argument('--data', type=str, required=False, help='Path to the dataset configuration file (YAML). (Optional, will be fetched from the run YAML if not provided).')
-    parser.add_argument('--split', type=str, default='val', choices=['train', 'val', 'test'], help='Specify the dataset split to evaluate on.')
-    parser.add_argument('--model', type=str, default=None, help='Path to the YOLO model file (optional). If provided, data must also be specified.')
+    parser.add_argument('--split', type=str, default='test', choices=['train', 'val', 'test'], help='Specify the dataset split to evaluate on.')
+    parser.add_argument('--model', type=str, default=None, help='Path to the RT-DETR model file (optional). If provided, data must also be specified.')
     parser.add_argument('--classes', type=str, default=None, help='Comma-separated list of class names to evaluate (default: None, evaluates all classes).')
 
     args = parser.parse_args()
 
-    if args.classes:
-        args.classes = list(map(int, args.classes.split(',')))
-    else:
-        del args.classes
+    args.classes = list(map(int, args.classes.split(','))) if args.classes else None
     if args.project is None:
         del args.project
 
     val_kwargs = vars(args)
-    evaluator = YOLOEvaluator(**val_kwargs)
+    evaluator = RTDETREvaluator(**val_kwargs)
     results = evaluator.evaluate_model()
     # print(results)  # Print the evaluation results

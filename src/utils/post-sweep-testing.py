@@ -13,9 +13,10 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Run test-set evaluation on all runs within a project',
 									  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 	parser.add_argument('--project', type=str, required=True, help='Project name')
+	parser.add_argument('--wandb_username', type=str, required=True, help='WandB username')
 	args = parser.parse_args()
 
-	wandb_prefix = f'vikhyat-3-org'
+	wandb_prefix = args.wandb_username
 	wandb_runs_dir = '/home/wandb-runs'
 
 	project_dir = f'{wandb_runs_dir}/{args.project}/'

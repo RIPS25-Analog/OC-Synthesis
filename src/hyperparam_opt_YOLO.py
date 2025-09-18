@@ -6,7 +6,6 @@ from finetune_YOLO import YOLOFinetuner
 from evaluate_YOLO import YOLOEvaluator
 
 runs_save_dir = '/home/wandb-runs'
-wandb_prefix = 'vikhyat-3-org/'
 
 def train_with_wandb(config=None):
     """Training function to be called by WandB sweep agent."""
@@ -96,6 +95,8 @@ if __name__ == "__main__":
     parser.add_argument('--sweep_count', type=int, default=50, help='Number of hyperparameter combinations to try.')
     parser.add_argument('--project', type=str, default='{data_config_name}', help='WandB project name for hyperparameter optimization.')
     parser.add_argument('--sweep_name', type=str, default=None, help='Name of the WandB sweep.')
+    parser.add_argument('--wandb_username', type=str, default=None, help='WandB username (need when specifying parent_sweep_name_dir).')
+
     args = parser.parse_args()
     
     # Validate required arguments
@@ -105,6 +106,7 @@ if __name__ == "__main__":
         args.project = f'{args.data.split("/")[-1].split(".")[0]}'
 
     if args.parent_sweep_name_dir is not None:
+        assert args.wandb_username is not None, "Must specify wandb_username when using parent_sweep_name_dir"
         # Find best weights for best sweep in given sweep name directory
         sweep_name_dir = args.parent_sweep_name_dir
         sweep_ids = [x for x in os.listdir(sweep_name_dir) if x!='discarded']
@@ -112,7 +114,7 @@ if __name__ == "__main__":
         sweep_id = sweep_ids[0]
 
         wandb_api = wandb.Api()
-        sweep = wandb_api.sweep(wandb_prefix + args.project + '/' + sweep_id)
+        sweep = wandb_api.sweep(f'{args.wandb_username}/{args.project}/{sweep_id}')
         best_run = sorted(sweep.runs, key=lambda run: run.summary.get("mAP50", 0), reverse=True)[0]
         args.model = os.path.join(sweep_name_dir, sweep_id, best_run.name, 'weights', 'best.pt')
         assert os.path.exists(args.model), f"Best model not found: {args.model}"
