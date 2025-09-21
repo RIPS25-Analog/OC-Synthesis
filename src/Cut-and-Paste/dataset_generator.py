@@ -30,7 +30,7 @@ random.seed(seed)
 BACKGROUND_DIR = '/home/data/raw/backgrounds/bg-20k/BG-20k/train'
 BACKGROUND_GLOB_STRING = '*.jpg'
 INVERTED_MASK = True # Set to true if white pixels represent background
-SELECTED_CLASSES = ['toy_car', 'can'] # these classes get labelles as 0,1,...
+SELECTED_CLASSES = ['toy_car', 'can', 'snack_box', 'ramen_box'] # these classes get labelles as 0,1,...
 
 # Parameters for generator
 NUMBER_OF_WORKERS = 24
