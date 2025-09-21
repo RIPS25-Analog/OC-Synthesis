@@ -1,7 +1,7 @@
 # Paths
 # Fill this according to own setup
 INVERTED_MASK = True # Set to true if white pixels represent background
-SELECTED_CLASSES = ['toy_car', 'can']
+SELECTED_CLASSES = ['toy_car', 'can', 'snack_box', 'ramen_box']
 
 # Parameters for generator
 NUMBER_OF_WORKERS = 24
@@ -18,8 +18,8 @@ MAX_ATTEMPTS_TO_SYNTHESIZE = 5
 MAX_OBJECTWISE_ATTEMPTS_TO_SYNTHESIZE = 10
 
 # Parameters for objects in images
-MIN_SCALE = 0.5 # min scale for scale augmentation
-MAX_SCALE = 1.5 # max scale for scale augmentation
+MIN_SCALE = 0.9 # min scale for scale augmentation
+MAX_SCALE = 2.0 # max scale for scale augmentation
 MIN_SCALED_DIM = 15 # minimum scaled width/height of object (in pixels) after scale augmentation
 MAX_DEGREES = 45 # max rotation allowed during rotation augmentation
 MAX_TRUNCATION_FRACTION = 0.25 # max fraction to be truncated = MAX_TRUNCACTION_FRACTION*(WIDTH/HEIGHT)
