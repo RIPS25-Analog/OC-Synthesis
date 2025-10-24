@@ -6,8 +6,8 @@ from ultralytics.utils.files import WorkingDirectory
 import argparse
 from ultralytics import settings
 
-wandb_prefix = 'vikhyat-3-org/pace-v3/'
-wandb_runs_dir = '/home/va6hp/wandb-runs'
+wandb_prefix = 'org-name/pace-v3/'
+wandb_runs_dir = '/home/wandb-runs'
 
 class RTDETRFinetuner:
     def __init__(self, **kwargs):
