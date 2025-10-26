@@ -1,9 +1,9 @@
 # Setup instructions:
 
 ```
-git clone --recursive https://github.com/RIPS25-Analog/RIPS25-AnalogDevices-ObjectDetection.git ## clone recursively to also fetch submodules
+git clone --recursive https://github.com/RIPS25-Analog/OC-Synthesis.git ## clone recursively to also fetch submodules
 
-cd RIPS25-AnalogDevices-ObjectDetection
+cd OC-Synthesis
 python -m venv env
 source env/bin/activate
 
@@ -84,3 +84,5 @@ To run hyperopt for YOLO finetune on a specific data file:
 To generate Cut n Paste dataset: 
 
 ``` python src/Cut-and-Paste/dataset_generator.py --n_images 100 /home/data/pace/toycar_can_v2-extra/foreground_objects/ /home/data/processed/cnp-pace/test-100 ```
+
+To generate other datasets, view the respective subfolders within src.

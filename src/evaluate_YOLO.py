@@ -19,7 +19,7 @@ class YOLOEvaluator:
         
         self.model = YOLO(self.model_path, task='detect')
 
-        if ('run' in kwargs):
+        if kwargs.get('run', None) is not None:
             self.save_dir = kwargs.get('run')
         else:
             self.save_dir = os.path.join(wandb_runs_dir, kwargs.get('project', 'yolo_finetune'))
@@ -79,7 +79,7 @@ class YOLOEvaluator:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Evaluate a YOLO model with specified parameters.',
                                       formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--run', type=str, default='yolo11n.pt', help='Path to the YOLO run directory (to fetch best weights from).')
+    parser.add_argument('--run', type=str, help='Path to the YOLO run directory (to fetch best weights from).')
     parser.add_argument('--batch', type=int, default=32, help='Batch size for evaluation.')
     parser.add_argument('--imgsz', type=int, default=640, help='Image size for evaluation.')
     parser.add_argument('--project', type=str, default=None, help='Project name for saving evaluation results (only used if --run is missing).')
